@@ -2,37 +2,45 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Illuminate\Support\Str;
-use Spatie\Permission\Models\Role;
+use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, SoftDeletes, HasRoles;
+    use HasApiTokens, HasFactory, Notifiable, HasRoles;
 
     /**
-     * The attributes that are mass assignable.
+     * Los atributos que son asignables en masa.
      *
-     * @var list<string>
+     * @var array<int, string>
      */
     protected $fillable = [
         'name',
         'email',
         'password',
         'department_id',
-        'is_active'
+        'is_active',
+        'profile_photo',
+        'phone',
+        'extension',
+        'position',
+        'address',
+        'notification_preferences',
+        'language',
+        'theme',
+        'two_factor_enabled',
+        'account_locked',
+        'failed_login_attempts',
+        'last_login_at',
     ];
 
     /**
-     * The attributes that should be hidden for serialization.
+     * Los atributos que deben ocultarse para la serialización.
      *
-     * @var list<string>
+     * @var array<int, string>
      */
     protected $hidden = [
         'password',
@@ -40,43 +48,90 @@ class User extends Authenticatable
     ];
 
     /**
-     * Get the attributes that should be cast.
+     * Los atributos que deben convertirse.
      *
-     * @return array<string, string>
+     * @var array<string, string>
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'password' => 'hashed',
         'is_active' => 'boolean',
+        'notification_preferences' => 'array',
+        'two_factor_enabled' => 'boolean',
+        'account_locked' => 'boolean',
+        'last_login_at' => 'datetime',
     ];
 
     /**
-     * Get the user's initials
+     * Obtiene el departamento al que pertenece el usuario.
      */
-    public function initials(): string
-    {
-        return Str::of($this->name)
-            ->explode(' ')
-            ->map(fn (string $name) => Str::of($name)->substr(0, 1))
-            ->implode('');
-    }
-
     public function department()
     {
         return $this->belongsTo(Department::class);
     }
 
-    public function tickets()
+    /**
+     * Obtiene los tickets creados por el usuario.
+     */
+    public function ticketsCreated()
     {
-        return $this->hasMany(Ticket::class);
+        return $this->hasMany(Ticket::class, 'created_by');
     }
 
-    public function assignedTickets()
+    /**
+     * Obtiene los tickets asignados al usuario.
+     */
+    public function ticketsAssigned()
     {
         return $this->hasMany(Ticket::class, 'assigned_to');
     }
 
-    public function scopeActive($query)
+    /**
+     * Obtiene las iniciales del nombre del usuario.
+     */
+    public function initials()
     {
-        return $query->where('is_active', true);
+        $words = explode(' ', $this->name);
+        $initials = '';
+
+        foreach ($words as $word) {
+            $initials .= strtoupper(substr($word, 0, 1));
+        }
+
+        return strlen($initials) > 2 ? substr($initials, 0, 2) : $initials;
+    }
+
+    /**
+     * Verifica si la cuenta del usuario está bloqueada.
+     */
+    public function isLocked()
+    {
+        return $this->account_locked;
+    }
+
+    /**
+     * Incrementa el contador de intentos fallidos de inicio de sesión.
+     */
+    public function incrementFailedLoginAttempts()
+    {
+        $this->failed_login_attempts += 1;
+
+        // Bloquear la cuenta después de 5 intentos fallidos
+        if ($this->failed_login_attempts >= 5) {
+            $this->account_locked = true;
+        }
+
+        $this->save();
+    }
+
+    /**
+     * Reinicia el contador de intentos fallidos de inicio de sesión.
+     */
+    public function resetFailedLoginAttempts()
+    {
+        $this->failed_login_attempts = 0;
+        $this->account_locked = false;
+        $this->last_login_at = now();
+        $this->save();
     }
 }

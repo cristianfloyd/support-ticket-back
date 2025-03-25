@@ -29,8 +29,9 @@
   - Tickets creados (hasMany)
   - Tickets asignados (hasMany)
 
-TicketResource
-Ruta: App\Filament\Resources\TicketResource
+## TicketResource
+
+### Ruta: App\Filament\Resources\TicketResource
 
 - **Campos principales**:
   - Título
@@ -59,8 +60,9 @@ Ruta: App\Filament\Resources\TicketResource
   - Tickets pendientes
   - Tiempo promedio de resolución
 
-DepartmentResource
-Ruta: App\Filament\Resources\DepartmentResource
+## DepartmentResource
+
+### Ruta: App\Filament\Resources\DepartmentResource
 
 - **Campos principales**:
   - Nombre
@@ -71,8 +73,9 @@ Ruta: App\Filament\Resources\DepartmentResource
   - Lista de usuarios
   - Estadísticas de tickets por departamento
 
-UnidadAcademicaResource
-Ruta: App\Filament\Resources\UnidadAcademicaResource
+## UnidadAcademicaResource
+
+### Ruta: App\Filament\Resources\UnidadAcademicaResource
 
 - **Campos principales**:
   - Nombre
@@ -83,8 +86,9 @@ Ruta: App\Filament\Resources\UnidadAcademicaResource
   - Edificios
   - Tickets relacionados
 
-Recursos de Soporte
-BuildingResource y OfficeResource
+## Recursos de Soporte
+
+### BuildingResource y OfficeResource
 
 - **Campos principales**:
   - Nombre
