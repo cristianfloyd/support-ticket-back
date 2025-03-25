@@ -4,7 +4,7 @@ Esta es una estructura recomendada para la aplicación backend desarrollada con 
 
 ## Directorio raíz del proyecto Laravel
 
-```
+```bash
 ├── app/
 │   ├── Console/
 │   ├── Exceptions/
@@ -100,17 +100,20 @@ Esta es una estructura recomendada para la aplicación backend desarrollada con 
 ```
 
 ## Descripción de los Directorios Principales
-* app/Http/Controllers/Api: Contiene los controladores responsables de manejar las solicitudes de la API y devolver respuestas JSON. Organizados por recurso.
-* app/Models: Define los modelos Eloquent que interactúan con la base de datos.
-* app/Http/Requests: Contiene las clases de solicitud utilizadas para validar los datos que llegan a la API.
-* app/Http/Resources: (Opcional pero recomendado) Contiene las clases para transformar los modelos en respuestas JSON consistentes.
-* app/Services: (Opcional) Para encapsular la lógica de negocio compleja.
-* app/Repositories: (Opcional) Para abstraer la lógica de acceso a datos.
-* app/Actions: (Opcional) Para implementar lógica de negocio como clases únicas y enfocadas.
-* app/Enums: (Opcional) Para definir valores constantes y mejorar la legibilidad del código.
-* app/Policies: Define las políticas de autorización para controlar el acceso a los recursos.
-* database/migrations: Contiene los archivos para crear y modificar la estructura de la base de datos.
-* routes/api.php: Define las rutas específicas para la API.
+
+* ***app/Http/Controllers/Api:*** Contiene los controladores responsables de manejar las solicitudes de la API y devolver respuestas JSON. Organizados por recurso.
+
+* ***app/Models:*** Define los modelos Eloquent que interactúan con la base de datos.
+
+* ***app/Http/Requests:*** Contiene las clases de solicitud utilizadas para validar los datos que llegan a la API.
+* ***app/Http/Resources:*** (Opcional pero recomendado) Contiene las clases para transformar los modelos en respuestas JSON consistentes.
+* ***app/Services:*** (Opcional) Para encapsular la lógica de negocio compleja.
+* ***app/Repositories:*** (Opcional) Para abstraer la lógica de acceso a datos.
+* ***app/Actions:*** (Opcional) Para implementar lógica de negocio como clases únicas y enfocadas.
+* ***app/Enums:*** (Opcional) Para definir valores constantes y mejorar la legibilidad del código.
+* ***app/Policies:*** Define las políticas de autorización para controlar el acceso a los recursos.
+* ***database/migrations:*** Contiene los archivos para crear y modificar la estructura de la base de datos.
+* ***routes/api.php:*** Define las rutas específicas para la API.
 
 ## Consideraciones
 

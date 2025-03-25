@@ -276,12 +276,12 @@ A continuación, se muestra la lista de endpoints actualizada:
     "user": {  
         "id": 456,  
         "name": "Juan Pérez",  
-        "email": "juan.perez@example.com"  
+        "email": "juan.perez@example.com"
     },  
     "assigned\_to": {  // Usuario asignado  
         "id": 789,  
         "name": "María García",  
-        "email": "maria.garcia@example.com"  
+        "email": "maria.garcia@example.com"
     },  
     "created\_at": "2024-07-24T10:00:00Z",  
     "updated\_at": "2024-07-24T12:30:00Z",  
