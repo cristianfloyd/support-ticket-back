@@ -29,6 +29,20 @@
   - Tickets creados (hasMany)
   - Tickets asignados (hasMany)
 
+- **Permisos y Roles (FilamentShield)**:
+
+  - Permisos generados:
+    - `view_user`
+    - `view_any_user`
+    - `create_user`
+    - `update_user`
+    - `delete_user`
+    - `delete_any_user`
+  - Roles con acceso:
+    - Administrador: todos los permisos
+    - Supervisor: `view_any_user`, `view_user`
+    - Restricciones específicas: Solo usuarios del mismo departamento
+
 ## TicketResource
 
 ### Ruta: App\Filament\Resources\TicketResource
@@ -59,6 +73,23 @@
   - Estadísticas de tickets
   - Tickets pendientes
   - Tiempo promedio de resolución
+
+- **Permisos y Roles (FilamentShield)**:
+  - Permisos generados: 
+    - `view_ticket`
+    - `view_any_ticket`
+    - `create_ticket`
+    - `update_ticket`
+    - `delete_ticket`
+    - `delete_any_ticket`
+  - Permisos personalizados:
+    - `assign_ticket`
+    - `change_ticket_status`
+    - `change_ticket_priority`
+  - Roles con acceso:
+    - Técnico: `view_any_ticket`, `update_ticket`, `assign_ticket`
+    - Usuario: `create_ticket`, `view_ticket` (solo propios)
+  - Restricciones específicas: Filtrado por departamento o creador
 
 ## DepartmentResource
 

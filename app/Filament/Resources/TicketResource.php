@@ -56,6 +56,9 @@ class TicketResource extends Resource implements HasShieldPermissions
             'restore_any',
             'replicate',
             'reorder',
+            'assign',
+            'change_status',
+            'change_priority',
         ];
     }
 
@@ -268,7 +271,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                     ->label('Resolver')
                     ->icon('heroicon-o-check')
                     ->color('success')
-                    ->visible(fn ($record) => !$record->is_resolved)
+                    ->visible(fn ($record) => !$record->is_resolved && auth()->user()->can('update_ticket'))
                     ->action(function (Ticket $record) {
                         $record->update([
                             'is_resolved' => true,
@@ -279,7 +282,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                     ->label('Reabrir')
                     ->icon('heroicon-o-arrow-path')
                     ->color('danger')
-                    ->visible(fn ($record) => $record->is_resolved)
+                    ->visible(fn ($record) => $record->is_resolved && auth()->user()->can('update_ticket'))
                     ->action(function (Ticket $record) {
                         $record->update([
                             'is_resolved' => false,
@@ -290,7 +293,53 @@ class TicketResource extends Resource implements HasShieldPermissions
                     ->label('Generar PDF')
                     ->icon('heroicon-o-document')
                     ->url(fn ($record) => route('tickets.pdf', $record))
-                    ->openUrlInNewTab(),
+                    ->openUrlInNewTab()
+                    ->visible(fn ($record) => auth()->user()->can('view_ticket')),
+                Action::make('assignTicket')
+                    ->label('Asignar')
+                    ->icon('heroicon-o-user-plus')
+                    ->form([
+                        Select::make('assigned_to')
+                            ->label('Asignar a')
+                            ->relationship('assignedTo', 'name')
+                            ->required()
+                    ])
+                    ->action(function (Ticket $record, array $data): void {
+                        $record->update([
+                            'assigned_to' => $data['assigned_to']
+                        ]);
+                    })
+                    ->visible(fn ($record) => auth()->user()->can('assign_ticket')),
+                Action::make('changeStatus')
+                    ->label('Cambiar Estado')
+                    ->icon('heroicon-o-arrow-path')
+                    ->form([
+                        Select::make('status_id')
+                            ->label('Nuevo Estado')
+                            ->relationship('status', 'name')
+                            ->required()
+                    ])
+                    ->action(function (Ticket $record, array $data): void {
+                        $record->update([
+                            'status_id' => $data['status_id']
+                        ]);
+                    })
+                    ->visible(fn ($record) => auth()->user()->can('change_status_ticket')),
+                Action::make('changePriority')
+                    ->label('Cambiar Prioridad')
+                    ->icon('heroicon-o-arrow-trending-up')
+                    ->form([
+                        Select::make('priority_id')
+                            ->label('Nueva Prioridad')
+                            ->relationship('priority', 'name')
+                            ->required()
+                    ])
+                    ->action(function (Ticket $record, array $data): void {
+                        $record->update([
+                            'priority_id' => $data['priority_id']
+                        ]);
+                    })
+                    ->visible(fn ($record) => auth()->user()->can('change_priority_ticket')),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
