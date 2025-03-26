@@ -1,8 +1,9 @@
 <?php
 
-use App\Livewire\Settings\Appearance;
-use App\Livewire\Settings\Password;
 use App\Livewire\Settings\Profile;
+use App\Livewire\Settings\Password;
+use Illuminate\Support\Facades\Auth;
+use App\Livewire\Settings\Appearance;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -20,5 +21,15 @@ Route::middleware(['auth'])->group(function () {
     Route::get('settings/password', Password::class)->name('settings.password');
     Route::get('settings/appearance', Appearance::class)->name('settings.appearance');
 });
+
+Route::get('/return-to-original-user', function() {
+    if (session()->has('impersonated_by')) {
+        $originalId = session()->pull('impersonated_by');
+        Auth::loginUsingId($originalId);
+        return redirect()->route('dashboard')->with('success', 'Has vuelto a tu cuenta original');
+    }
+
+    return redirect()->route('dashboard');
+})->name('return-to-original-user');
 
 require __DIR__.'/auth.php';

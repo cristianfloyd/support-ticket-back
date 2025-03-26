@@ -160,9 +160,27 @@
    - Diseño responsivo
 
 2. **Seguridad**:
-   - Implementación de Filament Shield
-   - Políticas de acceso por rol
-   - Registro de actividades
+   - Implementación de Filament Shield:
+     - Generación automática de permisos por recurso
+     - Panel de administración de permisos
+     - Roles de super admin
+     - Permisos generados automáticamente:
+       - view_[resource]
+       - view_any_[resource]
+       - create_[resource]
+       - update_[resource]
+       - delete_[resource]
+       - delete_any_[resource]
+     - Configuración de políticas automáticas
+     - Interfaz visual para gestión de permisos
+   - Políticas de acceso por rol:
+     - Implementación de roles jerárquicos
+     - Herencia de permisos
+     - Restricciones por departamento
+   - Registro de actividades:
+     - Logging de cambios en permisos
+     - Auditoría de accesos
+     - Historial de modificaciones
 
 3. **Notificaciones**:
    - Sistema de notificaciones en tiempo real

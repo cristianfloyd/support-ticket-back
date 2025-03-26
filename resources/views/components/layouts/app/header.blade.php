@@ -78,6 +78,20 @@
 
                     <flux:menu.separator />
 
+                    @if(session()->has('impersonated_by'))
+                        <flux:menu.separator />
+                        <flux:menu.radio.group>
+                            <flux:menu.item
+                                href="{{ route('return-to-original-user') }}"
+                                icon="heroicon-o-arrow-left-circle"
+                                color="warning">
+                                {{ __('Volver a mi cuenta') }}
+                            </flux:menu.item>
+                        </flux:menu.radio.group>
+                    @endif
+
+                    <flux:menu.separator />
+
                     <form method="POST" action="{{ route('logout') }}" class="w-full">
                         @csrf
                         <flux:menu.item as="button" type="submit" icon="arrow-right-start-on-rectangle" class="w-full">

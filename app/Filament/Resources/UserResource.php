@@ -30,12 +30,13 @@ use App\Filament\Resources\UserResource\Pages\EditUser;
 use App\Filament\Resources\UserResource\Pages\ViewUser;
 use App\Filament\Resources\UserResource\Pages\ListUsers;
 use App\Filament\Resources\UserResource\Pages\CreateUser;
+use BezhanSalleh\FilamentShield\Contracts\HasShieldPermissions;
 use App\Filament\Resources\UserResource\Widgets\UserStatsWidget;
 use App\Filament\Resources\UserResource\Widgets\UserActivityWidget;
 use App\Filament\Resources\UserResource\RelationManagers\TicketsCreatedRelationManager;
 use App\Filament\Resources\UserResource\RelationManagers\TicketsAssignedRelationManager;
 
-class UserResource extends Resource
+class UserResource extends Resource implements HasShieldPermissions
 {
     // Definimos el modelo asociado al recurso
     protected static ?string $model = User::class;
@@ -52,6 +53,22 @@ class UserResource extends Resource
     // Etiqueta para el recurso en singular y plural
     protected static ?string $modelLabel = 'Usuario';
     protected static ?string $pluralModelLabel = 'Usuarios';
+
+    public static function getPermissionPrefixes(): array
+    {
+        return [
+            'view',
+            'view_any',
+            'create',
+            'update',
+            'delete',
+            'delete_any',
+            'restore',
+            'restore_any',
+            'replicate',
+            'reorder',
+        ];
+    }
 
     // Verificar permisos para acceder al recurso
     public static function canAccess(): bool
