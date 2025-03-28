@@ -1,0 +1,21 @@
+2025-03-27 02:09:06,391 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.
+2025-03-27 02:09:06,398 INFO supervisord started with pid 1
+2025-03-27 02:09:07,401 INFO spawned: 'apache2' with pid 7
+2025-03-27 02:09:07,403 INFO spawned: 'sshd' with pid 8
+2025-03-27 02:09:08,492 INFO success: apache2 entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-03-27 02:09:08,497 INFO success: sshd entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-03-27 02:35:24,816 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.
+2025-03-27 02:35:24,823 INFO supervisord started with pid 1
+2025-03-27 02:35:25,825 INFO spawned: 'apache2' with pid 7
+2025-03-27 02:35:25,829 INFO spawned: 'sshd' with pid 8
+2025-03-27 02:35:27,127 INFO success: apache2 entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-03-27 02:35:27,128 INFO success: sshd entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-03-27 02:41:48,556 INFO reaped unknown pid 41 (exit status 0)
+2025-03-27 02:53:31,363 INFO reaped unknown pid 97 (exit status 0)
+2025-03-27 03:18:49,539 INFO exited: apache2 (exit status 0; expected)
+2025-03-27 04:06:19,030 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.
+2025-03-27 04:06:19,036 INFO supervisord started with pid 1
+2025-03-27 04:06:20,038 INFO spawned: 'apache2' with pid 8
+2025-03-27 04:06:20,040 INFO spawned: 'sshd' with pid 9
+2025-03-27 04:06:21,298 INFO success: apache2 entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-03-27 04:06:21,298 INFO success: sshd entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)

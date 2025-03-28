@@ -75,7 +75,7 @@
   - Tiempo promedio de resolución
 
 - **Permisos y Roles (FilamentShield)**:
-  - Permisos generados: 
+  - Permisos generados:
     - `view_ticket`
     - `view_any_ticket`
     - `create_ticket`
@@ -230,11 +230,67 @@
    - Eliminación segura
    - Cambios de estado masivos
 
-## Notas de Implementación
+## Notas de Implementación y Solución de Problemas Comunes
 
-- Usar Filament v3.x
-- Implementar dark mode
-- Configurar middleware de autenticación
-- Establecer políticas de autorización
-- Implementar validaciones personalizadas
-- Configurar eventos y listeners
+### Compatibilidad con Filament v3
+
+- **Cambios en la API**: Filament v3 ha modificado varios métodos respecto a versiones anteriores.
+  - El método `mutateFormDataUsing()` ha sido reemplazado por alternativas como `using()` o `afterStateUpdated()`.
+  - Ejemplo de uso correcto:
+    ```php
+    Forms\Components\FileUpload::make('path')
+        ->afterStateUpdated(function ($state, callable $set) {
+            // Procesar el archivo después de la subida
+        })
+    ```
+
+- **RelationManagers**: Al trabajar con RelationManagers, es necesario asignar correctamente los IDs de los modelos relacionados.
+  - Para acceder al modelo padre (por ejemplo, un Ticket) desde un RelationManager:
+
+```php
+    Tables\Actions\CreateAction::make()
+        ->using(function (array $data, string $model, RelationManager $livewire) {
+            // Obtener el ID del modelo padre
+            $parentId = $livewire->getOwnerRecord()->getKey();
+            $data['parent_id'] = $parentId;
+            
+            return $model::create($data);
+        })
+```
+
+### Manejo de Archivos Adjuntos
+
+- **Procesamiento de Metadatos**: Es importante procesar los metadatos de los archivos después de la subida.
+  - Verificar la existencia del archivo antes de obtener sus metadatos.
+  - Usar `Storage::disk('public')->path()` para obtener rutas de archivos de manera segura.
+  - Implementar manejo de excepciones al trabajar con archivos.
+
+- **Tipos de Archivos Aceptados**: La configuración actual acepta:
+  - Imágenes (image/*)
+  - PDF (application/pdf)
+  - Documentos de Word (.doc, .docx)
+  - Hojas de cálculo de Excel (.xls, .xlsx)
+  - Archivos de texto (text/plain)
+  - Tamaño máximo: 10MB
+
+### Seguridad y Autorización
+
+- **Asignación de Usuario**: Siempre asignar el ID del usuario actual a los registros que requieren autoría.
+  - Usar `Auth::id()` para obtener el ID del usuario autenticado.
+  
+- **Control de Acceso**: Implementar restricciones de visibilidad para acciones como editar o eliminar.
+  - Ejemplo:
+    ```php
+    Tables\Actions\EditAction::make()
+        ->visible(fn ($record) => $record->user_id === Auth::id())
+    ```
+
+### Solución de Problemas Comunes
+
+- **Error: Method does not exist**
+  - Problema: Uso de métodos obsoletos de versiones anteriores de Filament.
+  - Solución: Consultar la documentación oficial de Filament v3 para encontrar los métodos equivalentes actualizados.
+
+- **Error: Not null violation**
+  - Problema: No se asignan valores a campos obligatorios al crear registros relacionados.
+  - Solución: Asegurarse de que todos los campos con restricciones NOT NULL tengan valores asignados antes de crear el registro.

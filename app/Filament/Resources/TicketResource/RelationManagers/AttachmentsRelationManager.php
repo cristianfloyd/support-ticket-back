@@ -6,6 +6,8 @@ use Filament\Forms;
 use Filament\Tables;
 use Filament\Forms\Form;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Filament\Resources\RelationManagers\RelationManager;
 
 class AttachmentsRelationManager extends RelationManager
@@ -29,14 +31,24 @@ class AttachmentsRelationManager extends RelationManager
                     ->acceptedFileTypes(['image/*', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/plain'])
                     ->maxSize(10240) // 10MB
                     ->storeFileNamesIn('filename')
-                    ->mutateFormDataUsing(function (array $data): array {
-                        if (isset($data['path'])) {
-                            $path = $data['path'];
-                            $data['mime_type'] = mime_content_type(storage_path('app/public/' . $path));
-                            $data['size'] = filesize(storage_path('app/public/' . $path));
+                    ->afterStateUpdated(function ($state, callable $set) {
+                        if ($state) {
+                            try {
+                                $path = is_array($state) ? $state[0] : $state;
+                                $fullPath = Storage::disk('public')->path($path);
+
+                                if (file_exists($fullPath)) {
+                                    $set('mime_type', mime_content_type($fullPath));
+                                    $set('size', filesize($fullPath));
+                                }
+                            } catch (\Exception $e) {
+                                // Registrar el error pero permitir que continúe
+                                Log::error('Error al procesar archivo adjunto: ' . $e->getMessage());
+                            }
                         }
-                        return $data;
                     }),
+                Forms\Components\Hidden::make('mime_type'),
+                Forms\Components\Hidden::make('size'),
             ]);
     }
 
@@ -81,7 +93,30 @@ class AttachmentsRelationManager extends RelationManager
                 //
             ])
             ->headerActions([
-                Tables\Actions\CreateAction::make(),
+                Tables\Actions\CreateAction::make()
+                    ->using(function (array $data, string $model) {
+                        // Procesamiento adicional de datos antes de guardar
+                        try {
+                            if (isset($data['path'])) {
+                                $path = $data['path'];
+                                $fullPath = Storage::disk('public')->path($path);
+
+                                if (!isset($data['mime_type']) || !$data['mime_type']) {
+                                    $data['mime_type'] = mime_content_type($fullPath);
+                                }
+
+                                if (!isset($data['size']) || !$data['size']) {
+                                    $data['size'] = filesize($fullPath);
+                                }
+                            }
+
+                            return $model::create($data);
+                        } catch (\Exception $e) {
+                            // Capturar y registrar cualquier error durante la creación
+                            \Log::error('Error al crear archivo adjunto: ' . $e->getMessage());
+                            throw $e;
+                        }
+                    }),
             ])
             ->actions([
                 Tables\Actions\Action::make('download')

@@ -9,7 +9,7 @@ services:
             - '2200:22'  # Puerto para SSH
             - '${VITE_PORT:-5173}:5173'
         volumes:
-            - '.:/var/www/html'
+            - '.:/var/www/html:delegated'  # Montar código para desarrollo
             - '~/.ssh:/home/developer/.ssh:ro'  # Montar claves SSH del host
         networks:
             - sail
@@ -20,6 +20,8 @@ services:
         environment:
             DB_HOST: mysql
             REDIS_HOST: redis
+            APACHE_DOCUMENT_ROOT: /var/www/html/public
+            PHP_DISPLAY_ERRORS: 1
 
     mysql:
         image: 'mysql/mysql-server:8.0'

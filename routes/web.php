@@ -5,6 +5,7 @@ use App\Livewire\Settings\Password;
 use Illuminate\Support\Facades\Auth;
 use App\Livewire\Settings\Appearance;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\TicketController;
 use App\Http\Controllers\TicketPdfController;
 
 Route::get('/', function () {
@@ -38,3 +39,6 @@ Route::get('/tickets/{ticket}/pdf', [TicketPdfController::class, 'generate'])
     ->middleware(['auth']);
 
 require __DIR__.'/auth.php';
+
+// Ruta para generar PDF de tickets
+Route::get('/tickets/pdf/{ticket?}', [TicketController::class, 'generatePdf'])->name('tickets.pdf');

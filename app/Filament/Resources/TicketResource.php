@@ -271,7 +271,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                     ->label('Resolver')
                     ->icon('heroicon-o-check')
                     ->color('success')
-                    ->visible(fn ($record) => !$record->is_resolved && auth()->user()->can('update_ticket'))
+                    ->visible(fn ($record) => !$record->is_resolved && auth()->guard('web')->user()->can('update_ticket'))
                     ->action(function (Ticket $record) {
                         $record->update([
                             'is_resolved' => true,
@@ -292,7 +292,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                 Action::make('generatePdf')
                     ->label('Generar PDF')
                     ->icon('heroicon-o-document')
-                    ->url(fn ($record) => route('tickets.pdf', $record))
+                    ->url(fn (Ticket $record) => route('tickets.pdf', $record))
                     ->openUrlInNewTab()
                     ->visible(fn ($record) => auth()->user()->can('view_ticket')),
                 Action::make('assignTicket')
@@ -339,7 +339,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                             'priority_id' => $data['priority_id']
                         ]);
                     })
-                    ->visible(fn ($record) => auth()->user()->can('change_priority_ticket')),
+                    ->visible(fn ($record) => auth()->guard('web')->user()->can('change_priority_ticket')),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
