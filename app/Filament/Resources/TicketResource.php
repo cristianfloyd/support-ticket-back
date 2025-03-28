@@ -282,7 +282,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                     ->label('Reabrir')
                     ->icon('heroicon-o-arrow-path')
                     ->color('danger')
-                    ->visible(fn ($record) => $record->is_resolved && auth()->user()->can('update_ticket'))
+                    ->visible(fn ($record) => $record->is_resolved && auth()->guard('web')->user()->can('update_ticket'))
                     ->action(function (Ticket $record) {
                         $record->update([
                             'is_resolved' => false,
@@ -294,7 +294,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                     ->icon('heroicon-o-document')
                     ->url(fn (Ticket $record) => route('tickets.pdf', $record))
                     ->openUrlInNewTab()
-                    ->visible(fn ($record) => auth()->user()->can('view_ticket')),
+                    ->visible(fn ($record) => auth()->guard('web')->user()->can('view_ticket')),
                 Action::make('assignTicket')
                     ->label('Asignar')
                     ->icon('heroicon-o-user-plus')
@@ -309,7 +309,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                             'assigned_to' => $data['assigned_to']
                         ]);
                     })
-                    ->visible(fn ($record) => auth()->user()->can('assign_ticket')),
+                    ->visible(fn ($record) => auth()->guard('web')->user()->can('assign_ticket')),
                 Action::make('changeStatus')
                     ->label('Cambiar Estado')
                     ->icon('heroicon-o-arrow-path')
@@ -324,7 +324,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                             'status_id' => $data['status_id']
                         ]);
                     })
-                    ->visible(fn ($record) => auth()->user()->can('change_status_ticket')),
+                    ->visible(fn ($record) => auth()->guard('web')->user()->can('change_status_ticket')),
                 Action::make('changePriority')
                     ->label('Cambiar Prioridad')
                     ->icon('heroicon-o-arrow-trending-up')

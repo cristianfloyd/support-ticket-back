@@ -113,7 +113,7 @@ class AttachmentsRelationManager extends RelationManager
                             return $model::create($data);
                         } catch (\Exception $e) {
                             // Capturar y registrar cualquier error durante la creación
-                            \Log::error('Error al crear archivo adjunto: ' . $e->getMessage());
+                            Log::error('Error al crear archivo adjunto: ' . $e->getMessage());
                             throw $e;
                         }
                     }),

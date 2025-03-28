@@ -2,11 +2,83 @@
 
 ## Índice
 
-1. Recursos Principales
-2. Recursos de Soporte
-3. Recursos de Configuración
-4. Widgets y Personalizaciones
-5. Recursos Principales
+1. Comandos Artisan para Implementación
+2. Recursos Principales
+3. Recursos de Soporte
+4. Recursos de Configuración
+5. Widgets y Personalizaciones
+
+## Comandos Artisan para Implementación
+
+### Creación de Recursos
+
+```bash
+# Crear un nuevo recurso con todas las clases necesarias
+php artisan make:filament-resource NombreResource --generate
+
+# Crear un recurso con un modelo específico
+php artisan make:filament-resource Nombre --model=App\\Models\\NombreModelo --generate
+```
+
+### Creación de Widgets
+
+```bash
+# Crear un widget de tipo stats (estadísticas)
+php artisan make:filament-widget NombreStats --stats
+
+# Crear un widget de tipo chart (gráficos)
+php artisan make:filament-widget NombreChart --chart
+
+# Crear un widget de tipo list (listas)
+php artisan make:filament-widget NombreLista --list
+```
+
+### Creación de RelationManagers
+
+```bash
+# Crear un gestor de relaciones
+php artisan make:filament-relation-manager RecursoResource Relacion campo_id
+
+# Ejemplo para usuarios en departamento
+php artisan make:filament-relation-manager DepartmentResource users user_id
+```
+
+### Implementación de Seguridad (FilamentShield)
+
+```bash
+# Instalar FilamentShield
+php artisan shield:install --fresh
+
+# Generar permisos para todos los recursos
+php artisan shield:generate --resource=* --all
+
+# Generar permisos para un recurso específico
+php artisan shield:generate --resource=NombreResource
+
+# Generar política para un recurso
+php artisan shield:policy NombreResource --generate
+```
+
+### Actualización y Mantenimiento
+
+```bash
+# Optimizar Filament (después de cambios importantes)
+php artisan filament:optimize
+
+# Limpiar caché después de cambios
+php artisan optimize:clear
+
+# Actualizar permisos y roles
+php artisan db:seed --class=RolePermissionSeeder
+```
+
+### Buenas Prácticas
+
+1. Siempre generar los recursos con la opción `--generate` para crear todas las clases necesarias
+2. Después de crear un nuevo recurso, generar sus permisos con FilamentShield
+3. Actualizar el seeder de roles y permisos cuando se agreguen nuevos recursos
+4. Ejecutar los comandos de optimización después de cambios importantes
+5. Mantener la documentación actualizada con los nuevos recursos y sus características
 
 ## UserResource
 
@@ -237,12 +309,13 @@
 - **Cambios en la API**: Filament v3 ha modificado varios métodos respecto a versiones anteriores.
   - El método `mutateFormDataUsing()` ha sido reemplazado por alternativas como `using()` o `afterStateUpdated()`.
   - Ejemplo de uso correcto:
-    ```php
+
+```php
     Forms\Components\FileUpload::make('path')
         ->afterStateUpdated(function ($state, callable $set) {
             // Procesar el archivo después de la subida
         })
-    ```
+```
 
 - **RelationManagers**: Al trabajar con RelationManagers, es necesario asignar correctamente los IDs de los modelos relacionados.
   - Para acceder al modelo padre (por ejemplo, un Ticket) desde un RelationManager:
@@ -280,10 +353,11 @@
   
 - **Control de Acceso**: Implementar restricciones de visibilidad para acciones como editar o eliminar.
   - Ejemplo:
-    ```php
+
+```php
     Tables\Actions\EditAction::make()
         ->visible(fn ($record) => $record->user_id === Auth::id())
-    ```
+```
 
 ### Solución de Problemas Comunes
 

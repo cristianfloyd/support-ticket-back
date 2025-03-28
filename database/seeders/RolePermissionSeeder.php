@@ -59,34 +59,35 @@ class RolePermissionSeeder extends Seeder
 
         // Crear roles adicionales si no existen
         $adminRole = Role::firstOrCreate(['name' => 'admin']);
-        $managerRole = Role::firstOrCreate(['name' => 'manager']);
+        $supervisorRole = Role::firstOrCreate(['name' => 'supervisor']);
         $userRole = Role::firstOrCreate(['name' => 'user']);
 
         // Asignar todos los permisos al rol admin
         $adminRole->syncPermissions($allPermissions);
         $this->command->info('Permisos asignados al rol admin');
 
-        // Definir permisos para el rol manager
-        $managerPermissions = [
-            'view_user', 'view_any_user', 'create_user', 'update_user',
-            'view_ticket', 'view_any_ticket', 'create_ticket', 'update_ticket', 'delete_ticket',
+        // Definir permisos para el rol supervisor
+        $supervisorPermissions = [
+            'view_user', 'view_any_user',
+            'view_ticket', 'view_any_ticket', 'create_ticket', 'update_ticket',
             'view_category', 'view_any_category',
             'view_priority', 'view_any_priority',
             'view_status', 'view_any_status',
             'view_department', 'view_any_department',
-            // Añade aquí otros permisos relevantes para el rol manager
+            'assign_ticket', 'change_ticket_status', 'change_ticket_priority'
         ];
 
-        // Asignar permisos específicos al rol manager
-        $managerRole->syncPermissions(
-            Permission::whereIn('name', $managerPermissions)->get()
+        // Asignar permisos específicos al rol supervisor
+        $supervisorRole->syncPermissions(
+            Permission::whereIn('name', $supervisorPermissions)->get()
         );
-        $this->command->info('Permisos asignados al rol manager');
+        $this->command->info('Permisos asignados al rol supervisor');
 
         // Definir permisos para el rol user
         $userPermissions = [
-            'view_ticket', 'view_any_ticket', 'create_ticket',
-            // Añade aquí otros permisos relevantes para el rol user
+            'view_ticket', 'create_ticket',
+            'view_department',
+            // Los usuarios solo pueden ver sus propios tickets y su propio departamento
         ];
 
         // Asignar permisos específicos al rol user
@@ -134,9 +135,23 @@ class RolePermissionSeeder extends Seeder
             }
         }
 
+        // Permisos personalizados para tickets
+        $customPermissions = [
+            'assign_ticket',
+            'change_ticket_status',
+            'change_ticket_priority',
+        ];
+
+        foreach ($customPermissions as $permission) {
+            Permission::firstOrCreate([
+                'name' => $permission,
+                'guard_name' => 'web',
+            ]);
+        }
+
         // Agregar permiso de impersonación
         Permission::firstOrCreate(['name' => 'impersonate_user', 'guard_name' => 'web']);
 
-        $this->command->info('Permisos básicos creados manualmente');
+        $this->command->info('Permisos básicos y personalizados creados manualmente');
     }
 }
