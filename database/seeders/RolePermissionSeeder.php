@@ -60,6 +60,7 @@ class RolePermissionSeeder extends Seeder
         // Crear roles adicionales si no existen
         $adminRole = Role::firstOrCreate(['name' => 'admin']);
         $supervisorRole = Role::firstOrCreate(['name' => 'supervisor']);
+        $agentRole = Role::firstOrCreate(['name' => 'agent']);
         $userRole = Role::firstOrCreate(['name' => 'user']);
 
         // Asignar todos los permisos al rol admin
@@ -74,7 +75,53 @@ class RolePermissionSeeder extends Seeder
             'view_priority', 'view_any_priority',
             'view_status', 'view_any_status',
             'view_department', 'view_any_department',
-            'assign_ticket', 'change_ticket_status', 'change_ticket_priority'
+            'assign_ticket', 'change_status_ticket', 'change_priority_ticket',
+            // Permisos de Proveedor
+            'view_proveedor', 'view_any_proveedor',
+            'create_proveedor', 'update_proveedor',
+            'delete_proveedor', 'delete_any_proveedor',
+            'restore_proveedor', 'restore_any_proveedor',
+            // Permisos de Status
+            'create_status', 'update_status',
+            'delete_status', 'delete_any_status',
+            'restore_status', 'restore_any_status',
+            // Permisos de Priority
+            'create_priority', 'update_priority',
+            'delete_priority', 'delete_any_priority',
+            'restore_priority', 'restore_any_priority',
+            // Permisos de Category
+            'view_category', 'view_any_category',
+            'create_category', 'update_category',
+            'delete_category', 'delete_any_category',
+            'restore_category', 'restore_any_category',
+            // Permisos de UnidadAcademica
+            'view_unidad::academica', 'view_any_unidad::academica',
+            'create_unidad::academica', 'update_unidad::academica',
+            // Permisos de Building
+            'view_building', 'view_any_building',
+            'create_building', 'update_building',
+            'delete_building',
+            'delete_any_building',
+            'restore_building',
+            'restore_any_building',
+            // Permisos para Office
+            'view_office',
+            'view_any_office',
+            'create_office',
+            'update_office',
+            'delete_office',
+            'delete_any_office',
+            'restore_office',
+            'restore_any_office',
+            // Permisos para Equipment
+            'view_equipment',
+            'view_any_equipment',
+            'create_equipment',
+            'update_equipment',
+            'delete_equipment',
+            'delete_any_equipment',
+            'restore_equipment',
+            'restore_any_equipment',
         ];
 
         // Asignar permisos específicos al rol supervisor
@@ -83,11 +130,72 @@ class RolePermissionSeeder extends Seeder
         );
         $this->command->info('Permisos asignados al rol supervisor');
 
+        // Definir permisos para el rol agent
+        $agentPermissions = [
+            'view_ticket', 'view_any_ticket', 'create_ticket', 'update_ticket',
+            'view_category', 'view_any_category',
+            'view_priority', 'view_any_priority',
+            'view_status', 'view_any_status',
+            'view_department', 'view_any_department',
+            'assign_ticket', 'change_status_ticket', 'change_priority_ticket',
+            // Permisos de Proveedor (solo lectura)
+            'view_proveedor', 'view_any_proveedor',
+            // Permisos de Building
+            'view_building', 'view_any_building',
+            // Permisos para Office
+            'view_office', 'view_any_office',
+            // Permisos para Equipment
+            'view_equipment', 'view_any_equipment',
+            // Recursos base
+            'unidad::academica',
+            'building',
+            'office',
+            'equipment',
+            'category',
+            'priority',
+            'status',
+            'proveedor',
+            'ticket'
+        ];
+
+        // Asignar permisos específicos al rol agent
+        $agentRole->syncPermissions(
+            Permission::whereIn('name', $agentPermissions)->get()
+        );
+        $this->command->info('Permisos asignados al rol agent');
+
         // Definir permisos para el rol user
         $userPermissions = [
             'view_ticket', 'create_ticket',
             'view_department',
-            // Los usuarios solo pueden ver sus propios tickets y su propio departamento
+            // Permisos de Proveedor (solo lectura)
+            'view_proveedor', 'view_any_proveedor',
+            // Permisos de Status (solo lectura)
+            'view_status', 'view_any_status',
+            // Permisos de Priority (solo lectura)
+            'view_priority', 'view_any_priority',
+            // Permisos de Category (solo lectura)
+            'view_category', 'view_any_category',
+            // Permisos de UnidadAcademica (solo lectura)
+            'view_unidad::academica',
+            // Permisos de Building (solo lectura)
+            'view_building',
+            'view_any_building',
+            // Permisos para Office
+            'view_office',
+            'view_any_office',
+            // Permisos para Equipment
+            'view_equipment',
+            'view_any_equipment',
+            'unidad::academica',
+            'building',
+            'office',
+            'equipment',
+            'category',
+            'priority',
+            'status',
+            'proveedor',
+            'ticket',
         ];
 
         // Asignar permisos específicos al rol user
@@ -103,14 +211,14 @@ class RolePermissionSeeder extends Seeder
     private function generateBasicPermissions(): void
     {
         $resources = [
-            'user',
+            'unidad::academica',
+            'building',
+            'office',
+            'equipment',
             'ticket',
-            'category',
-            'priority',
-            'status',
-            'department',
+            'user',
             'role',
-            'permission',
+            'permission'
         ];
 
         $actions = [
@@ -138,8 +246,8 @@ class RolePermissionSeeder extends Seeder
         // Permisos personalizados para tickets
         $customPermissions = [
             'assign_ticket',
-            'change_ticket_status',
-            'change_ticket_priority',
+            'change_status_ticket',
+            'change_priority_ticket',
         ];
 
         foreach ($customPermissions as $permission) {

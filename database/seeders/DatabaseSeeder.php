@@ -12,29 +12,26 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
-            // 1. Datos maestros básicos (no dependen de otros)
+            // 1. Primero los permisos y roles
+            RolePermissionSeeder::class,  // Solo este seeder para roles y permisos
+
+            // 2. Luego los datos maestros
             DepartmentSeeder::class,
             StatusSeeder::class,
             PrioritySeeder::class,
             CategorySeeder::class,
             UnidadAcademicaSeeder::class,
-            ProveedorSeeder::class,
+            ProviderSeeder::class,
             BuildingSeeder::class,
             EquipmentSeeder::class,
             OfficeSeeder::class,
 
-            // 2. Sistema de permisos (en este orden específico)
-            PermissionSeeder::class,
-            RoleSeeder::class,
-            RolePermissionSeeder::class,
-
-            // 3. Usuarios (después de roles y permisos)
+            // 3. Usuarios
             UserSeeder::class,
             AdminUserSeeder::class,
 
-            // 4. Datos que dependen de usuarios
+            // 4. Datos dependientes
             TicketSeeder::class,
         ]);
-
     }
 }

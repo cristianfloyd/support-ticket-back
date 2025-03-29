@@ -15,16 +15,7 @@ class DepartmentPolicy
      */
     public function viewAny(User $user): bool
     {
-        if ($user->can('view_any_department')) {
-            return true;
-        }
-
-        // Los supervisores solo pueden ver departamentos
-        if ($user->hasRole('Supervisor')) {
-            return true;
-        }
-
-        return false;
+        return $user->can('view_any_department');
     }
 
     /**
@@ -32,18 +23,7 @@ class DepartmentPolicy
      */
     public function view(User $user, Department $department): bool
     {
-        // Administradores pueden ver cualquier departamento
-        if ($user->can('view_department')) {
-            return true;
-        }
-
-        // Supervisores solo pueden ver su propio departamento
-        if ($user->hasRole('Supervisor')) {
-            return $user->department_id === $department->id;
-        }
-
-        // Usuarios regulares solo pueden ver su propio departamento
-        return $user->department_id === $department->id;
+        return $user->can('view_department');
     }
 
     /**
@@ -59,16 +39,7 @@ class DepartmentPolicy
      */
     public function update(User $user, Department $department): bool
     {
-        if ($user->can('update_department')) {
-            return true;
-        }
-
-        // Supervisores pueden actualizar su propio departamento
-        if ($user->hasRole('Supervisor')) {
-            return $user->department_id === $department->id;
-        }
-
-        return false;
+        return $user->can('update_department');
     }
 
     /**
@@ -92,7 +63,7 @@ class DepartmentPolicy
      */
     public function forceDelete(User $user, Department $department): bool
     {
-        return $user->can('force_delete_department');
+        return $user->can('{{ ForceDelete }}');
     }
 
     /**
@@ -100,7 +71,7 @@ class DepartmentPolicy
      */
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_department');
+        return $user->can('{{ ForceDeleteAny }}');
     }
 
     /**

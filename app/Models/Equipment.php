@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Equipment extends Model
@@ -11,11 +13,12 @@ class Equipment extends Model
     use HasFactory, SoftDeletes;
 
     protected $table = 'equipments';
-    
+
     protected $fillable = [
         'name',
         'serial_number',
-        'proveedor_id',
+        'provider_id',
+        'office_id',
         'specifications',
         'purchase_date',
         'warranty_expiration'
@@ -26,13 +29,18 @@ class Equipment extends Model
         'warranty_expiration' => 'date',
     ];
 
-    public function proveedor()
+    public function provider(): BelongsTo
     {
-        return $this->belongsTo(Proveedor::class);
+        return $this->belongsTo(Provider::class, 'provider_id', 'id');
     }
 
-    public function tickets()
+    public function tickets(): HasMany
     {
-        return $this->hasMany(Ticket::class);
+        return $this->hasMany(Ticket::class, 'equipment_id', 'id');
+    }
+
+    public function office(): BelongsTo
+    {
+        return $this->belongsTo(Office::class, 'office_id', 'id');
     }
 }

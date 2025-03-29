@@ -15,10 +15,11 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use App\Filament\Resources\DepartmentResource\Pages;
 use App\Filament\Resources\DepartmentResource\RelationManagers;
+use BezhanSalleh\FilamentShield\Contracts\HasShieldPermissions;
 use App\Filament\Resources\DepartmentResource\Widgets\DepartmentTicketsOverview;
 use App\Filament\Resources\DepartmentResource\RelationManagers\UsersRelationManager;
 
-class DepartmentResource extends Resource
+class DepartmentResource extends Resource implements HasShieldPermissions
 {
     protected static ?string $model = Department::class;
 
@@ -27,6 +28,22 @@ class DepartmentResource extends Resource
     protected static ?string $navigationGroup = 'Administración';
 
     protected static ?int $navigationSort = 2;
+
+    public static function getPermissionPrefixes(): array
+    {
+        return [
+            'view',
+            'view_any',
+            'create',
+            'update',
+            'delete',
+            'delete_any',
+            'restore',
+            'restore_any',
+            'replicate',
+            'reorder',
+        ];
+    }
 
     public static function getNavigationBadge(): ?string
     {

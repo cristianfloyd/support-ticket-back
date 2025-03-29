@@ -12,10 +12,11 @@ class CreateEquipmentsTable extends Migration
             $table->id();
             $table->string('name');
             $table->string('serial_number')->unique();
-            $table->foreignId('proveedor_id')->constrained('proveedores');
+            $table->foreignId('provider_id')->constrained('providers');
             $table->text('specifications')->nullable();
             $table->date('purchase_date')->nullable();
             $table->date('warranty_expiration')->nullable();
+            $table->timestamp('next_maintenance')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

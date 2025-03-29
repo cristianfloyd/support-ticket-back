@@ -2,14 +2,14 @@
 
 namespace Database\Seeders;
 
-use App\Models\Proveedor;
+use App\Models\Provider;
 use Illuminate\Database\Seeder;
 
-class ProveedorSeeder extends Seeder
+class ProviderSeeder extends Seeder
 {
     public function run(): void
     {
-        $proveedores = [
+        $providers = [
             'HP',
             'Dell',
             'Lenovo',
@@ -17,8 +17,8 @@ class ProveedorSeeder extends Seeder
             'Samsung'
         ];
 
-        foreach ($proveedores as $proveedor) {
-            Proveedor::create(['name' => $proveedor]);
+        foreach ($providers as $provider) {
+            Provider::create(['name' => $provider]);
         }
     }
 }
