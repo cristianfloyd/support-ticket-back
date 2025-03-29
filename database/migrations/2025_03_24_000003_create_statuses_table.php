@@ -13,8 +13,8 @@ class CreateStatusesTable extends Migration
             $table->string('name');
             $table->string('color');
             $table->boolean('is_active')->default(true);
-            $table->timestamps();
             $table->softDeletes();
+            $table->timestamps();
         });
     }
 

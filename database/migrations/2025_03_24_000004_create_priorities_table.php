@@ -12,6 +12,8 @@ class CreatePrioritiesTable extends Migration
             $table->id();
             $table->string('name');
             $table->string('color');
+            $table->boolean('is_active')->default(true);
+            $table->softDeletes();
             $table->timestamps();
         });
     }
