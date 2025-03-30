@@ -12,6 +12,7 @@ class CreateAttachmentsTable extends Migration
             $table->id();
             $table->foreignId('ticket_id')->constrained('tickets')->onDelete('cascade');
             $table->string('filename');
+            $table->string('original_name');
             $table->string('path');
             $table->string('mime_type');
             $table->integer('size');

@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use Faker\Factory;
 use Illuminate\Database\Seeder;
 use App\Models\{Ticket, User, Comment, Attachment};
 
@@ -27,6 +28,7 @@ class TicketSeeder extends Seeder
             // Crear algunos adjuntos
             if (rand(0, 1)) {
                 Attachment::factory(rand(1, 3))->create([
+                    'original_name' => $ticket->title,
                     'ticket_id' => $ticket->id
                 ]);
             }

@@ -13,6 +13,7 @@ class Attachment extends Model
     protected $fillable = [
         'ticket_id',
         'filename',
+        'original_name',
         'path',
         'mime_type',
         'size'

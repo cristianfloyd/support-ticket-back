@@ -8,9 +8,10 @@ use Filament\Forms\Get;
 use Filament\Forms\Form;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\Log;
+use Filament\Forms\Components\Hidden;
+use Filament\Tables\Columns\TextColumn;
 use Illuminate\Support\Facades\Storage;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\FileUpload;
 use Filament\Resources\RelationManagers\RelationManager;
 
 class AttachmentsRelationManager extends RelationManager
@@ -39,14 +40,15 @@ class AttachmentsRelationManager extends RelationManager
                             if (!$state) {
                                 return;
                             }
+                            $fileName = $state->getFilename();
+                            $set('filename', $fileName);
                             
                             // Obtenemos el nombre del archivo original
-                            $filename = $state->getFilename();
-                            $set('filename', $filename);
+                            $originalName = $state->getClientOriginalName();
+                            $set('original_name', $originalName);
                             
                             // Obtenemos el tipo MIME y tamaño del archivo
-                            $filePath = Storage::disk('public')->path($state->getFilename());
-
+                            $filePath = $state->getRealPath();
                             if (file_exists($filePath)) {
                                 $mimeType = $state->getMimeType();
                                 $fileSize = $state->getSize();
@@ -58,11 +60,12 @@ class AttachmentsRelationManager extends RelationManager
                             Log::error('Error al procesar el archivo adjunto: ' . $e->getMessage());
                         }
                     }),
-                TextInput::make('ticket_id')
+                Hidden::make('ticket_id')
                     ->default(state: fn() => $this->getOwnerRecord()->id),
-                TextInput::make('filename')->dehydrated(true),
-                TextInput::make('mime_type')->dehydrated(true),   
-                TextInput::make('size')->dehydrated(true),
+                TextInput::make('original_name')->dehydrated(true),
+                Hidden::make('filename')->dehydrated(true),
+                Hidden::make('mime_type')->dehydrated(true),   
+                Hidden::make('size')->dehydrated(true),
             ]);
     }
 
@@ -70,9 +73,12 @@ class AttachmentsRelationManager extends RelationManager
     {
         return $table
             ->columns([
+                TextColumn::make('original_name')
+                    ->label('Nombre original'),
                 Tables\Columns\TextColumn::make('filename')
                     ->label('Nombre del archivo')
-                    ->searchable(),
+                    ->searchable()
+                    ->visible(fn() => auth()->guard('web')->user()->can('ticket_attachments.view_filename')),
                 Tables\Columns\TextColumn::make('mime_type')
                     ->label('Tipo'),
                 Tables\Columns\TextColumn::make('size')
