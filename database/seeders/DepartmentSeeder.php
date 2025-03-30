@@ -20,11 +20,15 @@ class DepartmentSeeder extends Seeder
             ['name' => 'Gerencia', 'description' => 'Departamento de Gerencia'],
             ['name' => 'Secretaría', 'description' => 'Departamento de Secretaría'],
             ['name' => 'Vicerrectorado', 'description' => 'Departamento de Vicerrectorado'],
-            ['name' => 'Dirección de Servicios', 'description' => 'Departamento de Dirección de Servicios']
+            ['name' => 'Dirección de Servicios', 'description' => 'Departamento de Dirección de Servicios'],
+            ['name' => 'Desarrollo Web', 'description' => 'Departamento de Desarrollo Web'],
+            ['name' => 'Desarrollo Backend', 'description' => 'Departamento de Desarrollo Backend'],
+            ['name' => 'Infraestructura', 'description' => 'Departamento de Infraestructura'],
+            ['name' => 'Operaciones', 'description' => 'Departamento de Operaciones'],
+            ['name' => 'Seguridad Informática', 'description' => 'Departamento de Seguridad Informática']
         ];
 
         foreach ($departments as $department) {
             Department::create($department);
         }
-    }
-}
+    }}
