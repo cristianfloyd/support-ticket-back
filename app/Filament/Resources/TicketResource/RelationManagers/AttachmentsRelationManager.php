@@ -4,10 +4,12 @@ namespace App\Filament\Resources\TicketResource\RelationManagers;
 
 use Filament\Forms;
 use Filament\Tables;
+use Filament\Forms\Get;
 use Filament\Forms\Form;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\FileUpload;
 use Filament\Resources\RelationManagers\RelationManager;
 
@@ -28,30 +30,39 @@ class AttachmentsRelationManager extends RelationManager
                     ->required()
                     ->disk('public')
                     ->directory('ticket-attachments')
-                    ->preserveFilenames()
                     ->acceptedFileTypes(['application/pdf', 'image/*', 'application/msword'])
                     ->maxSize(5120)
                     ->live()
-                    ->afterStateUpdated(function (Forms\Get $get, Forms\Set $set, ?string $state) {
-                        if ($state) {
-                            $set('filename', $state);
-                            $set('ticket_id', $this->getOwnerRecord()->id);
-
-                            // Obtener el mime_type y size del archivo temporal
-                            $tmpFile = Storage::disk('public')->path($state);
-                            if (file_exists($tmpFile)) {
-                                $set('mime_type', mime_content_type($tmpFile));
-                                $set('size', filesize($tmpFile));
-                            } else {
-                                dump('no existe');
+                    ->afterStateUpdated(function (Get $get, Forms\Set $set, $state) {
+                        try {
+                            // Si no hay archivo seleccionado, no hacemos nada
+                            if (!$state) {
+                                return;
                             }
+                            
+                            // Obtenemos el nombre del archivo original
+                            $filename = $state->getFilename();
+                            $set('filename', $filename);
+                            
+                            // Obtenemos el tipo MIME y tamaño del archivo
+                            $filePath = Storage::disk('public')->path($state->getFilename());
+
+                            if (file_exists($filePath)) {
+                                $mimeType = $state->getMimeType();
+                                $fileSize = $state->getSize();
+                                
+                                $set('mime_type', $mimeType);
+                                $set('size', $fileSize);
+                            }
+                        } catch (\Exception $e) {
+                            Log::error('Error al procesar el archivo adjunto: ' . $e->getMessage());
                         }
                     }),
-                Forms\Components\Hidden::make('ticket_id')
-                    ->default(fn() => $this->getOwnerRecord()->id),
-                Forms\Components\Hidden::make('filename'),
-                Forms\Components\Hidden::make('mime_type'),
-                Forms\Components\Hidden::make('size'),
+                TextInput::make('ticket_id')
+                    ->default(state: fn() => $this->getOwnerRecord()->id),
+                TextInput::make('filename')->dehydrated(true),
+                TextInput::make('mime_type')->dehydrated(true),   
+                TextInput::make('size')->dehydrated(true),
             ]);
     }
 
@@ -77,16 +88,57 @@ class AttachmentsRelationManager extends RelationManager
             ->headerActions([
                 Tables\Actions\CreateAction::make()
                     ->mutateFormDataUsing(function (array $data): array {
-                        $data['ticket_id'] = $this->getOwnerRecord()->id;
-                        return $data;
+                        try {
+                            // Aseguramos que el ticket_id esté establecido
+                            $data['ticket_id'] = $this->getOwnerRecord()->id;
+                            
+                            // Si por alguna razón los metadatos no se establecieron automáticamente,
+                            // intentamos establecerlos aquí como respaldo
+                            if (isset($data['path']) && (!isset($data['filename']) || !$data['filename'])) {
+                                $data['filename'] = pathinfo($data['path'], PATHINFO_BASENAME);
+                                
+                                $filePath = Storage::disk('public')->path($data['path']);
+                                if (file_exists($filePath)) {
+                                    $data['mime_type'] ??= mime_content_type($filePath);
+                                    $data['size'] ??= filesize($filePath);
+                                }
+                            }
+                            
+                            return $data;
+                        } catch (\Exception $e) {
+                            Log::error('Error al procesar datos del formulario: ' . $e->getMessage());
+                            return $data;
+                        }
                     }),
             ])
             ->actions([
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\DeleteAction::make()
+                ->before(function ($record) {
+                    try {
+                        // Eliminar el archivo físico cuando se elimina el registro
+                        if ($record->path && Storage::disk('public')->exists($record->path)) {
+                            Storage::disk('public')->delete($record->path);
+                        }
+                    } catch (\Exception $e) {
+                        Log::error('Error al eliminar archivo: ' . $e->getMessage());
+                    }
+                }),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\DeleteBulkAction::make()
+                    ->before(function ($records) {
+                        try {
+                            // Eliminar los archivos físicos cuando se eliminan los registros en masa
+                            foreach ($records as $record) {
+                                if ($record->path && Storage::disk('public')->exists($record->path)) {
+                                    Storage::disk('public')->delete($record->path);
+                                }
+                            }
+                        } catch (\Exception $e) {
+                            Log::error('Error al eliminar archivos en masa: ' . $e->getMessage());
+                        }
+                    }),
                 ]),
             ]);
     }
