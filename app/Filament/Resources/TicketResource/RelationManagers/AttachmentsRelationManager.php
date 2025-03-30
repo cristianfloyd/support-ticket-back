@@ -4,68 +4,36 @@ namespace App\Filament\Resources\TicketResource\RelationManagers;
 
 use Filament\Forms;
 use Filament\Tables;
-use Filament\Forms\Get;
 use Filament\Forms\Form;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\Log;
-use Filament\Forms\Components\Hidden;
-use Filament\Tables\Columns\TextColumn;
-use Illuminate\Support\Facades\Storage;
-use Filament\Forms\Components\TextInput;
+use Illuminate\Database\Eloquent\Model;
+use Filament\Forms\Components\FileUpload;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Tables\Columns\SpatieMediaLibraryImageColumn;
 
 class AttachmentsRelationManager extends RelationManager
 {
-    protected static string $relationship = 'attachments';
+    protected static string $relationship = 'media';
+
+    protected static ?string $recordTitleAttribute = 'name';
 
     protected static ?string $title = 'Archivos Adjuntos';
-
-    protected static ?string $recordTitleAttribute = 'filename';
 
     public function form(Form $form): Form
     {
         return $form
             ->schema([
-                Forms\Components\FileUpload::make('path')
-                    ->label('Archivo')
-                    ->required()
-                    ->disk('public')
-                    ->directory('ticket-attachments')
+                // Usamos el componente FileUpload estándar en lugar de SpatieMediaLibraryFileUpload
+                FileUpload::make('attachments')
+                    ->multiple()
+                    ->maxFiles(10)
                     ->acceptedFileTypes(['application/pdf', 'image/*', 'application/msword'])
                     ->maxSize(5120)
-                    ->live()
-                    ->afterStateUpdated(function (Get $get, Forms\Set $set, $state) {
-                        try {
-                            // Si no hay archivo seleccionado, no hacemos nada
-                            if (!$state) {
-                                return;
-                            }
-                            $fileName = $state->getFilename();
-                            $set('filename', $fileName);
-                            
-                            // Obtenemos el nombre del archivo original
-                            $originalName = $state->getClientOriginalName();
-                            $set('original_name', $originalName);
-                            
-                            // Obtenemos el tipo MIME y tamaño del archivo
-                            $filePath = $state->getRealPath();
-                            if (file_exists($filePath)) {
-                                $mimeType = $state->getMimeType();
-                                $fileSize = $state->getSize();
-                                
-                                $set('mime_type', $mimeType);
-                                $set('size', $fileSize);
-                            }
-                        } catch (\Exception $e) {
-                            Log::error('Error al procesar el archivo adjunto: ' . $e->getMessage());
-                        }
-                    }),
-                Hidden::make('ticket_id')
-                    ->default(state: fn() => $this->getOwnerRecord()->id),
-                TextInput::make('original_name')->dehydrated(true),
-                Hidden::make('filename')->dehydrated(true),
-                Hidden::make('mime_type')->dehydrated(true),   
-                Hidden::make('size')->dehydrated(true),
+                    ->downloadable()
+                    ->openable()
+                    ->directory('ticket-attachments')
+                    ->disk('public')
             ]);
     }
 
@@ -73,17 +41,37 @@ class AttachmentsRelationManager extends RelationManager
     {
         return $table
             ->columns([
-                TextColumn::make('original_name')
-                    ->label('Nombre original'),
-                Tables\Columns\TextColumn::make('filename')
+                Tables\Columns\TextColumn::make('file_name')
                     ->label('Nombre del archivo')
                     ->searchable()
-                    ->visible(fn() => auth()->guard('web')->user()->can('ticket_attachments.view_filename')),
+                    ->sortable(),
+                
+                SpatieMediaLibraryImageColumn::make('thumbnail')
+                    ->label('Vista previa')
+                    ->collection('attachments')
+                    ->conversion('thumb')
+                    ->visibleOn('image/*'),
+                
                 Tables\Columns\TextColumn::make('mime_type')
-                    ->label('Tipo'),
+                    ->label('Tipo')
+                    ->formatStateUsing(function ($state) {
+                        if (str_contains($state, 'image')) {
+                            return 'Imagen';
+                        } elseif (str_contains($state, 'pdf')) {
+                            return 'PDF';
+                        } elseif (str_contains($state, 'word') || str_contains($state, 'msword')) {
+                            return 'Word';
+                        } elseif (str_contains($state, 'excel') || str_contains($state, 'spreadsheet')) {
+                            return 'Excel';
+                        } else {
+                            return explode('/', $state)[1] ?? $state;
+                        }
+                    }),
+                
                 Tables\Columns\TextColumn::make('size')
                     ->label('Tamaño')
                     ->formatStateUsing(fn(int $state): string => number_format($state / 1024, 2) . ' KB'),
+                
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Fecha')
                     ->dateTime('d/m/Y H:i'),
@@ -93,58 +81,64 @@ class AttachmentsRelationManager extends RelationManager
             ])
             ->headerActions([
                 Tables\Actions\CreateAction::make()
-                    ->mutateFormDataUsing(function (array $data): array {
+                    ->using(function (array $data): Model {
                         try {
-                            // Aseguramos que el ticket_id esté establecido
-                            $data['ticket_id'] = $this->getOwnerRecord()->id;
+                            Log::info('Datos recibidos en using:', $data);
                             
-                            // Si por alguna razón los metadatos no se establecieron automáticamente,
-                            // intentamos establecerlos aquí como respaldo
-                            if (isset($data['path']) && (!isset($data['filename']) || !$data['filename'])) {
-                                $data['filename'] = pathinfo($data['path'], PATHINFO_BASENAME);
+                            $ticket = $this->getOwnerRecord();
+                            
+                            // Si no hay archivos, lanzamos una excepción
+                            if (!isset($data['attachments']) || empty($data['attachments'])) {
+                                throw new \Exception('No se han proporcionado archivos');
+                            }
+                            
+                            // Procesamos cada archivo manualmente
+                            $files = $data['attachments'];
+                            $firstMedia = null;
+                            
+                            foreach ($files as $file) {
+                                $filePath = storage_path('app/public/' . $file);
                                 
-                                $filePath = Storage::disk('public')->path($data['path']);
-                                if (file_exists($filePath)) {
-                                    $data['mime_type'] ??= mime_content_type($filePath);
-                                    $data['size'] ??= filesize($filePath);
+                                // Verificamos que el archivo existe
+                                if (!file_exists($filePath)) {
+                                    Log::warning("El archivo no existe: {$filePath}");
+                                    continue;
+                                }
+                                
+                                // Añadimos el archivo a la colección 'attachments'
+                                $media = $ticket->addMedia($filePath)
+                                    ->toMediaCollection('attachments');
+                                
+                                // Guardamos la primera media para devolverla
+                                if (!$firstMedia) {
+                                    $firstMedia = $media;
                                 }
                             }
                             
-                            return $data;
+                            // Si no se ha podido añadir ningún archivo, lanzamos una excepción
+                            if (!$firstMedia) {
+                                throw new \Exception('No se ha podido añadir ningún archivo');
+                            }
+                            
+                            return $firstMedia;
                         } catch (\Exception $e) {
-                            Log::error('Error al procesar datos del formulario: ' . $e->getMessage());
-                            return $data;
+                            Log::error('Error al procesar archivos: ' . $e->getMessage());
+                            throw $e;
                         }
                     }),
             ])
             ->actions([
-                Tables\Actions\DeleteAction::make()
-                ->before(function ($record) {
-                    try {
-                        // Eliminar el archivo físico cuando se elimina el registro
-                        if ($record->path && Storage::disk('public')->exists($record->path)) {
-                            Storage::disk('public')->delete($record->path);
-                        }
-                    } catch (\Exception $e) {
-                        Log::error('Error al eliminar archivo: ' . $e->getMessage());
-                    }
-                }),
+                Tables\Actions\Action::make('download')
+                    ->label('Descargar')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->url(fn ($record) => $record->getUrl())
+                    ->openUrlInNewTab(),
+                
+                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make()
-                    ->before(function ($records) {
-                        try {
-                            // Eliminar los archivos físicos cuando se eliminan los registros en masa
-                            foreach ($records as $record) {
-                                if ($record->path && Storage::disk('public')->exists($record->path)) {
-                                    Storage::disk('public')->delete($record->path);
-                                }
-                            }
-                        } catch (\Exception $e) {
-                            Log::error('Error al eliminar archivos en masa: ' . $e->getMessage());
-                        }
-                    }),
+                    Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ]);
     }

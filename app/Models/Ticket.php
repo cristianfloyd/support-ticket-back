@@ -2,15 +2,18 @@
 
 namespace App\Models;
 
+use Spatie\MediaLibrary\HasMedia;
 use Illuminate\Database\Eloquent\Model;
+use Spatie\MediaLibrary\InteractsWithMedia;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
-class Ticket extends Model
+class Ticket extends Model implements HasMedia
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, InteractsWithMedia;
 
     protected $table = 'tickets';
 
@@ -45,9 +48,34 @@ class Ticket extends Model
         $this->attributes['user_id'] = $value;
     }
 
-// #####################################    RELACIONES   ##############################
+    // ##################################### MEDIA LIBRARY #####################################
 
-/**
+    // Definimos las colecciones de medios
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('attachments')
+            ->useDisk('public');
+    }
+
+    // Definimos las conversiones para imágenes
+    public function registerMediaConversions(Media $media = null): void
+    {
+        $this->addMediaConversion('thumb')
+            ->width(200)
+            ->height(200)
+            ->performOnCollections('attachments')
+            ->nonQueued();
+    }
+
+    // Método para obtener los adjuntos (para mantener compatibilidad)
+    public function getAttachmentsAttribute()
+    {
+        return $this->getMedia('attachments');
+    }
+
+    // #####################################    RELACIONES   #####################################
+
+    /**
      * Obtiene el usuario que creó el ticket.
      */
     public function user()
