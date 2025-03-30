@@ -107,7 +107,7 @@ class Ticket extends Model
 
     public function attachments(): HasMany
     {
-        return $this->hasMany(Attachment::class, 'ticket_id', 'id');
+        return $this->hasMany(Attachment::class);
     }
 
     public function notifications(): HasMany
