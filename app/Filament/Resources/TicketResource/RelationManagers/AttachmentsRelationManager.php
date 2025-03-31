@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Filament\Forms\Components\FileUpload;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables\Columns\SpatieMediaLibraryImageColumn;
+use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
 
 class AttachmentsRelationManager extends RelationManager
 {
@@ -20,20 +21,25 @@ class AttachmentsRelationManager extends RelationManager
 
     protected static ?string $title = 'Archivos Adjuntos';
 
+    // Importante: Definimos la colección por defecto
+    protected static string $collectionName = 'attachments';
+
     public function form(Form $form): Form
     {
         return $form
             ->schema([
-                // Usamos el componente FileUpload estándar en lugar de SpatieMediaLibraryFileUpload
-                FileUpload::make('attachments')
+                // Configuración correcta del componente SpatieMediaLibraryFileUpload
+                SpatieMediaLibraryFileUpload::make('attachments')
+                    ->collection(static::$collectionName) // Usamos la propiedad estática
                     ->multiple()
                     ->maxFiles(10)
-                    ->acceptedFileTypes(['application/pdf', 'image/*', 'application/msword'])
+                    ->acceptedFileTypes(['application/pdf', 'image/*', 'application/msword', 'application/vnd.ms-excel'])
                     ->maxSize(5120)
                     ->downloadable()
                     ->openable()
                     ->directory('ticket-attachments')
                     ->disk('public')
+                    ->required()
             ]);
     }
 
@@ -48,9 +54,9 @@ class AttachmentsRelationManager extends RelationManager
                 
                 SpatieMediaLibraryImageColumn::make('thumbnail')
                     ->label('Vista previa')
-                    ->collection('attachments')
+                    ->collection(static::$collectionName) // Usamos la propiedad estática
                     ->conversion('thumb')
-                    ->visibleOn('image/*'),
+                    ->hidden(fn ($record) => !str_contains($record->mime_type, 'image')),
                 
                 Tables\Columns\TextColumn::make('mime_type')
                     ->label('Tipo')
@@ -80,49 +86,22 @@ class AttachmentsRelationManager extends RelationManager
                 //
             ])
             ->headerActions([
+                // Necesitamos volver a agregar using() pero de forma más simple
                 Tables\Actions\CreateAction::make()
                     ->using(function (array $data): Model {
                         try {
-                            Log::info('Datos recibidos en using:', $data);
-                            
                             $ticket = $this->getOwnerRecord();
                             
-                            // Si no hay archivos, lanzamos una excepción
-                            if (!isset($data['attachments']) || empty($data['attachments'])) {
-                                throw new \Exception('No se han proporcionado archivos');
-                            }
+                            // Creamos un registro de media directamente con la colección
+                            $media = $ticket->media()->create([
+                                'collection_name' => static::$collectionName,
+                                'name' => $data['attachments'][0] ?? 'Archivo sin nombre',
+                                'file_name' => $data['attachments'][0] ?? 'archivo.txt',
+                            ]);
                             
-                            // Procesamos cada archivo manualmente
-                            $files = $data['attachments'];
-                            $firstMedia = null;
-                            
-                            foreach ($files as $file) {
-                                $filePath = storage_path('app/public/' . $file);
-                                
-                                // Verificamos que el archivo existe
-                                if (!file_exists($filePath)) {
-                                    Log::warning("El archivo no existe: {$filePath}");
-                                    continue;
-                                }
-                                
-                                // Añadimos el archivo a la colección 'attachments'
-                                $media = $ticket->addMedia($filePath)
-                                    ->toMediaCollection('attachments');
-                                
-                                // Guardamos la primera media para devolverla
-                                if (!$firstMedia) {
-                                    $firstMedia = $media;
-                                }
-                            }
-                            
-                            // Si no se ha podido añadir ningún archivo, lanzamos una excepción
-                            if (!$firstMedia) {
-                                throw new \Exception('No se ha podido añadir ningún archivo');
-                            }
-                            
-                            return $firstMedia;
+                            return $media;
                         } catch (\Exception $e) {
-                            Log::error('Error al procesar archivos: ' . $e->getMessage());
+                            Log::error('Error al crear archivo: ' . $e->getMessage());
                             throw $e;
                         }
                     }),
@@ -133,6 +112,8 @@ class AttachmentsRelationManager extends RelationManager
                     ->icon('heroicon-o-arrow-down-tray')
                     ->url(fn ($record) => $record->getUrl())
                     ->openUrlInNewTab(),
+                
+                Tables\Actions\ViewAction::make(),
                 
                 Tables\Actions\DeleteAction::make(),
             ])
