@@ -6,9 +6,8 @@ use Filament\Forms;
 use Filament\Tables;
 use Filament\Forms\Form;
 use Filament\Tables\Table;
-use Illuminate\Support\Facades\Log;
+use App\Services\MediaService;
 use Illuminate\Database\Eloquent\Model;
-use Filament\Forms\Components\FileUpload;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables\Columns\SpatieMediaLibraryImageColumn;
 use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
@@ -21,16 +20,22 @@ class AttachmentsRelationManager extends RelationManager
 
     protected static ?string $title = 'Archivos Adjuntos';
 
-    // Importante: Definimos la colección por defecto
+    // Definimos la colección por defecto
     protected static string $collectionName = 'attachments';
 
+    /**
+     * Define el formulario para agregar/editar archivos adjuntos
+     * 
+     * @param Form $form
+     * @return Form
+     */
     public function form(Form $form): Form
     {
         return $form
             ->schema([
-                // Configuración correcta del componente SpatieMediaLibraryFileUpload
+                // Configuración del componente SpatieMediaLibraryFileUpload
                 SpatieMediaLibraryFileUpload::make('attachments')
-                    ->collection(static::$collectionName) // Usamos la propiedad estática
+                    ->collection(static::$collectionName)
                     ->multiple()
                     ->maxFiles(10)
                     ->acceptedFileTypes(['application/pdf', 'image/*', 'application/msword', 'application/vnd.ms-excel'])
@@ -43,6 +48,12 @@ class AttachmentsRelationManager extends RelationManager
             ]);
     }
 
+    /**
+     * Define la tabla para mostrar los archivos adjuntos
+     * 
+     * @param Table $table
+     * @return Table
+     */
     public function table(Table $table): Table
     {
         return $table
@@ -54,63 +65,56 @@ class AttachmentsRelationManager extends RelationManager
                 
                 SpatieMediaLibraryImageColumn::make('thumbnail')
                     ->label('Vista previa')
-                    ->collection(static::$collectionName) // Usamos la propiedad estática
+                    ->collection(static::$collectionName)
                     ->conversion('thumb')
-                    ->hidden(fn ($record) => !str_contains($record->mime_type, 'image')),
+                    ->hidden(fn ($record) => !MediaService::isImage($record)),
                 
                 Tables\Columns\TextColumn::make('mime_type')
                     ->label('Tipo')
-                    ->formatStateUsing(function ($state) {
-                        if (str_contains($state, 'image')) {
-                            return 'Imagen';
-                        } elseif (str_contains($state, 'pdf')) {
-                            return 'PDF';
-                        } elseif (str_contains($state, 'word') || str_contains($state, 'msword')) {
-                            return 'Word';
-                        } elseif (str_contains($state, 'excel') || str_contains($state, 'spreadsheet')) {
-                            return 'Excel';
-                        } else {
-                            return explode('/', $state)[1] ?? $state;
-                        }
-                    }),
+                    ->formatStateUsing(fn ($state) => MediaService::formatMimeType($state)),
                 
                 Tables\Columns\TextColumn::make('size')
                     ->label('Tamaño')
-                    ->formatStateUsing(fn(int $state): string => number_format($state / 1024, 2) . ' KB'),
+                    ->formatStateUsing(fn ($state) => MediaService::formatFileSize($state)),
                 
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Fecha')
                     ->dateTime('d/m/Y H:i'),
             ])
-            ->filters([
-                //
-            ])
+            ->filters([])
             ->headerActions([
-                // Necesitamos volver a agregar using() pero de forma más simple
                 Tables\Actions\CreateAction::make()
+                    ->form([
+                        Forms\Components\FileUpload::make('attachments')
+                            ->multiple()
+                            ->maxFiles(10)
+                            ->acceptedFileTypes(['application/pdf', 'image/*', 'application/msword', 'application/vnd.ms-excel'])
+                            ->maxSize(5120)
+                            ->directory('ticket-attachments')
+                            ->disk('public')
+                            ->required()
+                    ])
                     ->using(function (array $data): Model {
-                        try {
-                            $ticket = $this->getOwnerRecord();
-                            
-                            // Creamos un registro de media directamente con la colección
-                            $media = $ticket->media()->create([
-                                'collection_name' => static::$collectionName,
-                                'name' => $data['attachments'][0] ?? 'Archivo sin nombre',
-                                'file_name' => $data['attachments'][0] ?? 'archivo.txt',
-                            ]);
-                            
-                            return $media;
-                        } catch (\Exception $e) {
-                            Log::error('Error al crear archivo: ' . $e->getMessage());
-                            throw $e;
+                        $ticket = $this->getOwnerRecord();
+                        
+                        if (empty($data['attachments'])) {
+                            throw new \Exception('No se han proporcionado archivos para adjuntar.');
                         }
+
+                        // Procesar cada archivo
+                        foreach ($data['attachments'] as $file) {
+                            $ticket->addMedia($file)
+                                ->toMediaCollection(static::$collectionName);
+                        }
+
+                        return $ticket->media()->latest()->first();
                     }),
             ])
             ->actions([
                 Tables\Actions\Action::make('download')
                     ->label('Descargar')
                     ->icon('heroicon-o-arrow-down-tray')
-                    ->url(fn ($record) => $record->getUrl())
+                    ->url(fn ($record) => MediaService::getMediaUrl($record) ?? '#')
                     ->openUrlInNewTab(),
                 
                 Tables\Actions\ViewAction::make(),
