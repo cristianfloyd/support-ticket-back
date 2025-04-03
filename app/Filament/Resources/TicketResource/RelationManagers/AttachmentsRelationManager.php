@@ -25,7 +25,7 @@ class AttachmentsRelationManager extends RelationManager
 
     protected static ?string $title = 'Archivos Adjuntos';
 
-    // Importante: Definimos la colección por defecto
+    // Definimos la colección por defecto
     protected static string $collectionName = 'attachments';
 
     public function form(Form $form): Form
@@ -83,11 +83,19 @@ class AttachmentsRelationManager extends RelationManager
                     ->label('Fecha')
                     ->dateTime('d/m/Y H:i'),
             ])
-            ->filters([
-                //
-            ])
+            ->filters([])
             ->headerActions([
                 Tables\Actions\CreateAction::make()
+                    ->form([
+                        Forms\Components\FileUpload::make('attachments')
+                            ->multiple()
+                            ->maxFiles(10)
+                            ->acceptedFileTypes(['application/pdf', 'image/*', 'application/msword', 'application/vnd.ms-excel'])
+                            ->maxSize(5120)
+                            ->directory('ticket-attachments')
+                            ->disk('public')
+                            ->required()
+                    ])
                     ->using(function (array $data): Model {
                         try {
                             $ticket = $this->getOwnerRecord();
