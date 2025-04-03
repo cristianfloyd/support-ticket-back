@@ -5,17 +5,21 @@ namespace App\Filament\Resources\TicketResource\RelationManagers;
 use Filament\Forms;
 use Filament\Tables;
 use Filament\Forms\Form;
+use App\Models\Attachment;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\Log;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\ViewColumn;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
+use Filament\Tables\Columns\ImageColumn;
 use Filament\Forms\Components\FileUpload;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables\Columns\SpatieMediaLibraryImageColumn;
-use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
 
 class AttachmentsRelationManager extends RelationManager
 {
-    protected static string $relationship = 'media';
+    protected static string $relationship = 'attachments';
 
     protected static ?string $recordTitleAttribute = 'name';
 
@@ -28,15 +32,12 @@ class AttachmentsRelationManager extends RelationManager
     {
         return $form
             ->schema([
-                // Configuración correcta del componente SpatieMediaLibraryFileUpload
-                SpatieMediaLibraryFileUpload::make('attachments')
-                    ->collection(static::$collectionName) // Usamos la propiedad estática
+                FileUpload::make('files')
+                    ->label('Archivos')
                     ->multiple()
                     ->maxFiles(10)
                     ->acceptedFileTypes(['application/pdf', 'image/*', 'application/msword', 'application/vnd.ms-excel'])
                     ->maxSize(5120)
-                    ->downloadable()
-                    ->openable()
                     ->directory('ticket-attachments')
                     ->disk('public')
                     ->required()
@@ -47,18 +48,18 @@ class AttachmentsRelationManager extends RelationManager
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('file_name')
+                TextColumn::make('filename')
                     ->label('Nombre del archivo')
                     ->searchable()
                     ->sortable(),
-                
-                SpatieMediaLibraryImageColumn::make('thumbnail')
+
+                ViewColumn::make('thumbnail')
                     ->label('Vista previa')
-                    ->collection(static::$collectionName) // Usamos la propiedad estática
-                    ->conversion('thumb')
-                    ->hidden(fn ($record) => !str_contains($record->mime_type, 'image')),
-                
-                Tables\Columns\TextColumn::make('mime_type')
+                    ->view('filament.tables.columns.attachment-thumbnail')
+                    ->visible(fn($record) => !$this->isImageAttachment($record)),
+
+
+                TextColumn::make('mime_type')
                     ->label('Tipo')
                     ->formatStateUsing(function ($state) {
                         if (str_contains($state, 'image')) {
@@ -73,12 +74,12 @@ class AttachmentsRelationManager extends RelationManager
                             return explode('/', $state)[1] ?? $state;
                         }
                     }),
-                
-                Tables\Columns\TextColumn::make('size')
+
+                TextColumn::make('size')
                     ->label('Tamaño')
                     ->formatStateUsing(fn(int $state): string => number_format($state / 1024, 2) . ' KB'),
-                
-                Tables\Columns\TextColumn::make('created_at')
+
+                TextColumn::make('created_at')
                     ->label('Fecha')
                     ->dateTime('d/m/Y H:i'),
             ])
@@ -86,20 +87,71 @@ class AttachmentsRelationManager extends RelationManager
                 //
             ])
             ->headerActions([
-                // Necesitamos volver a agregar using() pero de forma más simple
                 Tables\Actions\CreateAction::make()
                     ->using(function (array $data): Model {
                         try {
                             $ticket = $this->getOwnerRecord();
-                            
-                            // Creamos un registro de media directamente con la colección
-                            $media = $ticket->media()->create([
-                                'collection_name' => static::$collectionName,
-                                'name' => $data['attachments'][0] ?? 'Archivo sin nombre',
-                                'file_name' => $data['attachments'][0] ?? 'archivo.txt',
+                            $files = $data['files'] ?? [];
+
+                            // Crear un nuevo attachment para cada archivo
+                            foreach ($files as $file) {
+                                $filePath = Storage::disk('public')->path($file);
+
+                                // Obtener el tipo MIME de manera segura
+                                $mimeType = null;
+                                if (function_exists('mime_content_type')) {
+                                    $mimeType = mime_content_type($filePath);
+                                } else {
+                                    // Alternativa usando la extensión del archivo
+                                    $extension = pathinfo($filePath, PATHINFO_EXTENSION);
+                                    $mimeTypes = [
+                                        'pdf' => 'application/pdf',
+                                        'jpg' => 'image/jpeg',
+                                        'jpeg' => 'image/jpeg',
+                                        'png' => 'image/png',
+                                        'doc' => 'application/msword',
+                                        'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                                        'xls' => 'application/vnd.ms-excel',
+                                        'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                                        // Añadir más tipos según sea necesario
+                                    ];
+                                    $mimeType = $mimeTypes[strtolower($extension)] ?? 'application/octet-stream';
+                                }
+
+                                // Crear el registro de attachment
+                                $attachment = Attachment::create([
+                                    'ticket_id' => $ticket->id,
+                                    'filename' => basename($file),
+                                    'original_name' => basename($file),
+                                    'path' => $filePath,
+                                    'mime_type' => $mimeType,
+                                    'size' => filesize($filePath)
+                                ]);
+
+                                // Agregar el archivo a la colección de medios del attachment
+                                $attachment->addMediaFromDisk($file, 'public')
+                                    ->toMediaCollection('file');
+
+                                // Actualizar el attachment con la información del media
+                                $media = $attachment->getFirstMedia('file');
+                                if ($media) {
+                                    $attachment->update([
+                                        'path' => $media->getPath(),
+                                        'mime_type' => $media->mime_type,
+                                        'size' => $media->size
+                                    ]);
+                                }
+                            }
+
+                            // Devolver el primer attachment creado (o crear uno vacío si no hay archivos)
+                            return $attachment ?? Attachment::create([
+                                'ticket_id' => $ticket->id,
+                                'filename' => 'placeholder',
+                                'original_name' => 'placeholder',
+                                'path' => 'placeholder',
+                                'mime_type' => 'text/plain',
+                                'size' => 0
                             ]);
-                            
-                            return $media;
                         } catch (\Exception $e) {
                             Log::error('Error al crear archivo: ' . $e->getMessage());
                             throw $e;
@@ -110,11 +162,12 @@ class AttachmentsRelationManager extends RelationManager
                 Tables\Actions\Action::make('download')
                     ->label('Descargar')
                     ->icon('heroicon-o-arrow-down-tray')
-                    ->url(fn ($record) => $record->getUrl())
+                    ->url(fn($record) => $record->file_url)
+                    ->visible(fn($record) => $record->file_url !== null)
                     ->openUrlInNewTab(),
-                
+
                 Tables\Actions\ViewAction::make(),
-                
+
                 Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
@@ -122,5 +175,19 @@ class AttachmentsRelationManager extends RelationManager
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ]);
+    }
+
+    protected function isImageAttachment($record): bool
+    {
+        if ($record === null) {
+            return false;
+        }
+
+        $file = $record->getFile();
+        if (!$file) {
+            return false;
+        }
+
+        return str_contains($file->mime_type, 'image');
     }
 }

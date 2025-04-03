@@ -11,9 +11,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
-class Ticket extends Model implements HasMedia
+class Ticket extends Model
 {
-    use HasFactory, SoftDeletes, InteractsWithMedia;
+    use HasFactory, SoftDeletes;
 
     protected $table = 'tickets';
 
@@ -38,6 +38,7 @@ class Ticket extends Model implements HasMedia
         'resolved_at' => 'datetime',
     ];
 
+    // ##############################   GETTERS & SETTERS   ##############################
     public function getCreatedByAttribute()
     {
         return $this->user_id;
@@ -48,24 +49,15 @@ class Ticket extends Model implements HasMedia
         $this->attributes['user_id'] = $value;
     }
 
+    // Método helper para acceder a los archivos a través de attachments
+    public function getFilesAttribute()
+    {
+        return $this->attachments->flatMap(function($attachment) {
+            return $attachment->getMedia('file');
+        });
+    }
+
     // ##################################### MEDIA LIBRARY #####################################
-
-    // Definimos las colecciones de medios
-    public function registerMediaCollections(): void
-    {
-        $this->addMediaCollection('attachments')
-            ->useDisk('public');
-    }
-
-    // Definimos las conversiones para imágenes
-    public function registerMediaConversions(Media $media = null): void
-    {
-        $this->addMediaConversion('thumb')
-            ->width(200)
-            ->height(200)
-            ->performOnCollections('attachments')
-            ->nonQueued();
-    }
 
     // Método para obtener los adjuntos (para mantener compatibilidad)
     public function getAttachmentsAttribute()
