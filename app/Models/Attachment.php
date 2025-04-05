@@ -3,7 +3,9 @@
 namespace App\Models;
 
 use Spatie\Image\Enums\Fit;
+use App\Services\MediaService;
 use Spatie\MediaLibrary\HasMedia;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Database\Eloquent\Model;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -24,50 +26,97 @@ class Attachment extends Model implements HasMedia
         'size'
     ];
 
+    protected $appends = ['file_url', 'file_size', 'file_type', 'is_image'];
+
+    /*
+    * Boot del modelo
+    * Actualiza los atributos del attachment cuando se crea
+    */
     protected static function booted()
     {
         parent::booted();
 
         static::created(function ($attachment) {
-            if ($media = $attachment->getFile()) {
-                $attachment->update([
-                    'path' => $media->getPath(),
-                    'mime_type' => $media->mime_type,
-                    'size' => $media->size
-                ]);
+            try {
+                if ($media = $attachment->getFile()) {
+                    $attachment->update([
+                        'path' => $media->getPath(),
+                        'mime_type' => $media->mime_type,
+                        'size' => $media->size
+                    ]);
+                }
+            } catch (\Exception $e) {
+                Log::error('Error al actualizar attachment después de crear: ' . $e->getMessage());
             }
         });
     }
 
 
-    protected $appends = ['file_url', 'file_size', 'file_type', 'is_image'];
 
     // ############################## RELATIONS ##############################
 
+    /**
+     * Relación con el ticket al que pertenece este adjunto
+     * 
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
     public function ticket()
     {
         return $this->belongsTo(Ticket::class, 'ticket_id', 'id');
     }
 
     // ############################ STATIC METHODS ############################
+    /**
+     * Crea un nuevo attachment a partir de un archivo subido
+     * 
+     * @param \Illuminate\Http\UploadedFile $file
+     * @param int $ticketId
+     * @param array $attributes
+     * @return Attachment
+     */
     public static function createFromUploadedFile($file, $ticketId, $attributes = [])
     {
-        $attachment = self::create([
-            'ticket_id' => $ticketId,
-            'filename' => $file->getClientOriginalName(),
-            'original_name' => $file->getClientOriginalName(),
-            'mime_type' => $file->getMimeType(),
-            'size' => $file->getSize(),
-            ...$attributes
-        ]);
+        try {
+            // Crear el registro de attachment con datos básicos
+            $attachment = self::create([
+                'ticket_id' => $ticketId,
+                'filename' => $file->getClientOriginalName(),
+                'original_name' => $file->getClientOriginalName(),
+                'mime_type' => $file->getMimeType(),
+                'size' => $file->getSize(),
+                ...$attributes
+            ]);
 
-        $attachment->addMedia($file)
-            ->toMediaCollection('file');
+            // Usar MediaService para añadir el archivo a la colección
+            $media = MediaService::addMedia(
+                $attachment, 
+                $file, 
+                'file', 
+                ['ticket_id' => $ticketId]
+            );
 
-        return $attachment;
+            // Si se creó el media, actualizar el attachment con la información
+            if ($media) {
+                $attachment->update([
+                    'path' => $media->getPath(),
+                    'mime_type' => $media->mime_type,
+                    'size' => $media->size
+                ]);
+            }
+
+            return $attachment;
+        } catch (\Exception $e) {
+            Log::error('Error al crear attachment desde archivo: ' . $e->getMessage());
+            throw $e;
+        }
     }
 
     // ############################## MEDIA LIBRARY ##############################
+    /**
+     * Registra las colecciones de medios para este modelo
+     * 
+     * @return void
+     */
     public function registerMediaCollections(): void
     {
         $this->addMediaCollection('file')
@@ -89,31 +138,76 @@ class Attachment extends Model implements HasMedia
             ->nonQueued();
     }
 
-    // Método auxiliar para facilitar el acceso al archivo
+    /**
+     * Método auxiliar para facilitar el acceso al archivo
+     * 
+     * @return Media|null
+     */
     public function getFile()
     {
         return $this->getFirstMedia('file');
     }
 
     // ############################## GETTERS ##############################
+    /**
+     * Obtiene la URL del archivo
+     * 
+     * @return string|null
+     */
     public function getFileUrlAttribute()
     {
-        return $this->getFile()?->getUrl();
+        return MediaService::getMediaUrl($this->getFile());
     }
     
-
+    /**
+     * Obtiene el tamaño del archivo
+     * 
+     * @return int|null
+     */
     public function getFileSizeAttribute()
     {
-        return $this->getFile()?->size;
+        $file = $this->getFile();
+        return $file ? $file->size : null;
     }
 
+    /**
+     * Obtiene el tipo MIME del archivo
+     * 
+     * @return string|null
+     */
     public function getFileTypeAttribute()
     {
-        return $this->getFile()?->mime_type;
+        $file = $this->getFile();
+        return $file ? $file->mime_type : null;
     }
 
+    /**
+     * Determina si el archivo es una imagen
+     * 
+     * @return bool
+     */
     public function getIsImageAttribute()
     {
-        return $this->getFile() ? str_contains($this->getFile()->mime_type, 'image') : false;
+        return MediaService::isImage($this->getFile());
+    }
+    
+    /**
+     * Obtiene el tipo de archivo formateado para mostrar
+     * 
+     * @return string
+     */
+    public function getFormattedFileTypeAttribute()
+    {
+        return MediaService::formatMimeType($this->file_type);
+    }
+    
+    /**
+     * Obtiene el tamaño del archivo formateado
+     * 
+     * @return string
+     */
+    public function getFormattedFileSizeAttribute()
+    {
+        return MediaService::formatFileSize($this->file_size);
     }
 }

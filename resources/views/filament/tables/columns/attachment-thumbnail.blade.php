@@ -1,10 +1,11 @@
 @php
     $media = $getRecord()->getFile();
+    $mediaUrl = App\Services\MediaService::getSecureMediaUrl($media, 'thumb');
 @endphp
 
-@if ($media && str_contains($media->mime_type, 'image'))
+@if ($media && str_contains($media->mime_type, 'image') && $mediaUrl)
     <img 
-        src="{{ $media->getUrl('thumb') }}" 
+        src="{{ $mediaUrl }}" 
         alt="{{ $media->name }}" 
         style="max-width: 100px; max-height: 100px; object-fit: contain;"
     >

@@ -34,4 +34,14 @@ class ViewTicket extends ViewRecord
                 ->openUrlInNewTab(),
         ];
     }
+
+    public function getContentTabLabel(): string|null
+    {
+        return 'Detalles';
+    }
+
+    public function hasCombinedRelationManagerTabsWithContent(): bool
+    {
+        return true;
+    }
 }

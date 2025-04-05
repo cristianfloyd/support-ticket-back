@@ -22,7 +22,7 @@ class MediaService
         if (!$mimeType) {
             return 'Desconocido';
         }
-        
+
         if (str_contains($mimeType, 'image')) {
             return 'Imagen';
         } elseif (str_contains($mimeType, 'pdf')) {
@@ -39,7 +39,7 @@ class MediaService
             }
         }
     }
-    
+
     /**
      * Formatea el tamaño del archivo en KB
      *
@@ -53,7 +53,7 @@ class MediaService
         }
         return number_format($size / 1024, 2) . ' KB';
     }
-    
+
     /**
      * Añade un archivo al modelo utilizando Spatie Media Library
      *
@@ -74,7 +74,7 @@ class MediaService
             return null;
         }
     }
-    
+
     /**
      * Crea un registro de media a partir de datos de formulario
      *
@@ -89,29 +89,29 @@ class MediaService
             if (!isset($data['attachments']) || empty($data['attachments'])) {
                 return null;
             }
-            
+
             // Si estamos usando Filament con SpatieMediaLibraryFileUpload, 
             // los archivos ya estarán procesados de manera diferente
             $fileName = $data['attachments'][0] ?? null;
-            
+
             if (!$fileName) {
                 return null;
             }
-            
+
             // Aquí utilizamos la API de Spatie para crear el registro
             $media = $model->media()->create([
                 'collection_name' => $collectionName,
                 'name' => $fileName,
                 'file_name' => $fileName,
             ]);
-            
+
             return $media;
         } catch (\Exception $e) {
             Log::error('Error al crear archivo: ' . $e->getMessage());
             return null;
         }
     }
-    
+
     /**
      * Obtiene la URL de un archivo de media
      *
@@ -124,7 +124,7 @@ class MediaService
         if (!$media) {
             return null;
         }
-        
+
         try {
             return $conversion ? $media->getUrl($conversion) : $media->getUrl();
         } catch (\Exception $e) {
@@ -132,7 +132,90 @@ class MediaService
             return null;
         }
     }
-    
+
+    /**
+     * Obtiene la URL de un archivo de media con verificaciones de seguridad
+     * 
+     * @param Media|null $media
+     * @param string|null $conversion
+     * @return string|null
+     */
+    public static function getSecureMediaUrl(?Media $media, ?string $conversion = null): ?string
+    {
+        if (!$media) {
+            return null;
+        }
+
+        try {
+            // Verificar si el archivo existe físicamente
+            if (!self::fileExists($media)) {
+                Log::warning("El archivo físico no existe para el media ID: {$media->id}");
+                return null;
+            }
+
+            // Si se solicita una conversión, verificar que exista
+            if ($conversion && !self::hasConversion($media, $conversion)) {
+                Log::warning("La conversión '{$conversion}' no existe para el media ID: {$media->id}");
+                return self::getMediaUrl($media); // Devolver la URL original como fallback
+            }
+
+            // Obtener la URL
+            $url = $conversion ? $media->getUrl($conversion) : $media->getUrl();
+
+            // Asegurarse de que la URL sea absoluta
+            if (!str_starts_with($url, 'http')) {
+                $url = url($url);
+            }
+
+            return $url;
+        } catch (\Exception $e) {
+            Log::error('Error al obtener URL segura del archivo: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Verifica si una conversión existe para un media
+     * 
+     * @param Media|null $media
+     * @param string $conversion
+     * @return bool
+     */
+    public static function hasConversion(?Media $media, string $conversion): bool
+    {
+        if (!$media) {
+            return false;
+        }
+
+        try {
+            return $media->hasGeneratedConversion($conversion);
+        } catch (\Exception $e) {
+            Log::error('Error al verificar conversión: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Verifica si el archivo físico existe
+     * 
+     * @param Media|null $media
+     * @return bool
+     */
+    public static function fileExists(?Media $media): bool
+    {
+        if (!$media) {
+            return false;
+        }
+
+        try {
+            return file_exists($media->getPath());
+        } catch (\Exception $e) {
+            Log::error('Error al verificar existencia del archivo: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+
     /**
      * Verifica si un archivo es una imagen
      *
@@ -144,10 +227,10 @@ class MediaService
         if (!$media || !isset($media->mime_type)) {
             return false;
         }
-        
+
         return str_contains($media->mime_type, 'image');
     }
-    
+
     /**
      * Elimina un archivo de media
      *
@@ -159,7 +242,7 @@ class MediaService
         if (!$media) {
             return false;
         }
-        
+
         try {
             $media->delete();
             return true;

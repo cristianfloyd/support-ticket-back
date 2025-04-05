@@ -12,6 +12,7 @@ use Filament\Forms\Components\Tabs;
 use Filament\Tables\Actions\Action;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Tabs\Tab;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\TextInput;
@@ -82,50 +83,59 @@ class TicketResource extends Resource implements HasShieldPermissions
                     ->tabs([
                         Tab::make('Información Principal')
                             ->schema([
-                                TextInput::make('title')
+                                Section::make()
+                                ->schema([
+
+                                    TextInput::make('title')
                                     ->label('Título')
                                     ->required()
                                     ->maxLength(255)
-                                    ->columnSpan(2),
-
-                                MarkdownEditor::make('description')
+                                    ->columnSpan(7),
+                                    
+                                    MarkdownEditor::make('description')
                                     ->label('Descripción')
                                     ->required()
-                                    ->columnSpan(2),
+                                    ->columnSpan(7),
+                                ])
+                                ->columnSpan(10),
 
-                                Select::make('status_id')
+                                Section::make()
+                                ->schema([
+                                    Select::make('status_id')
                                     ->label('Estado')
                                     ->relationship('status', 'name')
                                     ->preload()
                                     ->required(),
-
-                                Select::make('priority_id')
+                                    
+                                    Select::make('priority_id')
                                     ->label('Prioridad')
                                     ->relationship('priority', 'name')
                                     ->preload()
                                     ->required(),
-
-                                Select::make('category_id')
+                                ])->columnSpan(2),
+                                    
+                                    Select::make('category_id')
                                     ->label('Categoría')
                                     ->relationship('category', 'name')
                                     ->preload()
                                     ->required(),
-
-                                Select::make('assigned_to')
+                                    
+                                    
+                                    Select::make('assigned_to')
                                     ->label('Asignado a')
                                     ->relationship('assignedTo', 'name')
                                     ->preload()
                                     ->searchable(),
-
-                                Select::make('unidad_academica_id')
+                                    
+                                    Select::make('unidad_academica_id')
                                     ->label('Unidad Académica')
                                     ->relationship('unidadAcademica', 'name')
                                     ->preload()
                                     ->required()
                                     ->reactive()
                                     ->afterStateUpdated(fn (callable $set) => $set('building_id', null)),
-
-                                Select::make('building_id')
+                                    
+                                    Select::make('building_id')
                                     ->label('Edificio')
                                     ->relationship('building', 'name', function ($query, $get) {
                                         $unidadAcademicaId = $get('unidad_academica_id');
@@ -138,8 +148,8 @@ class TicketResource extends Resource implements HasShieldPermissions
                                     ->searchable()
                                     ->reactive()
                                     ->afterStateUpdated(fn (callable $set) => $set('office_id', null)),
-
-                                Select::make('office_id')
+                                    
+                                    Select::make('office_id')
                                     ->label('Oficina')
                                     ->relationship('office', 'name', function ($query, $get) {
                                         $buildingId = $get('building_id');
@@ -150,13 +160,13 @@ class TicketResource extends Resource implements HasShieldPermissions
                                     })
                                     ->preload()
                                     ->searchable(),
-
-                                Select::make('equipment_id')
+                                    
+                                    Select::make('equipment_id')
                                     ->label('Equipo')
                                     ->relationship('equipment', 'name')
                                     ->preload()
                                     ->searchable(),
-
+                                    
                                 Toggle::make('is_resolved')
                                     ->label('Resuelto')
                                     ->reactive()
@@ -167,7 +177,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                                             $set('resolved_at', null);
                                         }
                                     }),
-                            ])->columns(2),
+                            ])->columns(12),
 
                         Tab::make('Comentarios')
                             ->schema([
@@ -183,7 +193,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                             ->schema([
                                 // Aquí se podría implementar un historial de cambios del ticket
                             ]),
-                    ])->columnSpan(2),
+                    ])->columnSpan(9),
             ]);
     }
 

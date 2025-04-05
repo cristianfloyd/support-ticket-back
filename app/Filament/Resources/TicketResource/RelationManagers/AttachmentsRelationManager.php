@@ -7,6 +7,7 @@ use Filament\Tables;
 use Filament\Forms\Form;
 use App\Models\Attachment;
 use Filament\Tables\Table;
+use App\Services\MediaService;
 use Illuminate\Support\Facades\Log;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ViewColumn;
@@ -26,7 +27,7 @@ class AttachmentsRelationManager extends RelationManager
     protected static ?string $title = 'Archivos Adjuntos';
 
     // Definimos la colección por defecto
-    protected static string $collectionName = 'attachments';
+    protected static string $collectionName = 'file';
 
     public function form(Form $form): Form
     {
@@ -87,7 +88,7 @@ class AttachmentsRelationManager extends RelationManager
             ->headerActions([
                 Tables\Actions\CreateAction::make()
                     ->form([
-                        Forms\Components\FileUpload::make('attachments')
+                        Forms\Components\FileUpload::make('files')
                             ->multiple()
                             ->maxFiles(10)
                             ->acceptedFileTypes(['application/pdf', 'image/*', 'application/msword', 'application/vnd.ms-excel'])
@@ -100,48 +101,31 @@ class AttachmentsRelationManager extends RelationManager
                         try {
                             $ticket = $this->getOwnerRecord();
                             $files = $data['files'] ?? [];
+                            $createdAttachment = null;
 
                             // Crear un nuevo attachment para cada archivo
                             foreach ($files as $file) {
                                 $filePath = Storage::disk('public')->path($file);
 
-                                // Obtener el tipo MIME de manera segura
-                                $mimeType = null;
-                                if (function_exists('mime_content_type')) {
-                                    $mimeType = mime_content_type($filePath);
-                                } else {
-                                    // Alternativa usando la extensión del archivo
-                                    $extension = pathinfo($filePath, PATHINFO_EXTENSION);
-                                    $mimeTypes = [
-                                        'pdf' => 'application/pdf',
-                                        'jpg' => 'image/jpeg',
-                                        'jpeg' => 'image/jpeg',
-                                        'png' => 'image/png',
-                                        'doc' => 'application/msword',
-                                        'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                                        'xls' => 'application/vnd.ms-excel',
-                                        'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                                        // Añadir más tipos según sea necesario
-                                    ];
-                                    $mimeType = $mimeTypes[strtolower($extension)] ?? 'application/octet-stream';
-                                }
-
-                                // Crear el registro de attachment
+                                // Crear el registro de attachment con datos básicos
                                 $attachment = Attachment::create([
                                     'ticket_id' => $ticket->id,
                                     'filename' => basename($file),
                                     'original_name' => basename($file),
                                     'path' => $filePath,
-                                    'mime_type' => $mimeType,
+                                    'mime_type' => 'application/octet-stream', // Valor temporal
                                     'size' => filesize($filePath)
                                 ]);
 
-                                // Agregar el archivo a la colección de medios del attachment
-                                $attachment->addMediaFromDisk($file, 'public')
-                                    ->toMediaCollection('file');
+                                // Usar MediaService para añadir el archivo a la coleccion
+                                $media = MediaService::addMedia(
+                                    $attachment,
+                                    $filePath,
+                                    'file',
+                                    ['ticket_id' => $ticket->id ]
+                                );
 
                                 // Actualizar el attachment con la información del media
-                                $media = $attachment->getFirstMedia('file');
                                 if ($media) {
                                     $attachment->update([
                                         'path' => $media->getPath(),
@@ -149,6 +133,18 @@ class AttachmentsRelationManager extends RelationManager
                                         'size' => $media->size
                                     ]);
                                 }
+
+                                $createdAttachment = $attachment;
+                                Log::info($createdAttachment);
+                                
+                                return $createdAttachment ?? Attachment::create([
+                                    'ticket_id' => $ticket->id,
+                                    'filename' => 'placeholder',
+                                    'original_name' => 'placeholder',
+                                    'path' => 'placeholder',
+                                    'mime_type' => 'text/plain',
+                                    'size' => 0
+                                ]);
                             }
 
                             // Devolver el primer attachment creado (o crear uno vacío si no hay archivos)
@@ -176,11 +172,25 @@ class AttachmentsRelationManager extends RelationManager
 
                 Tables\Actions\ViewAction::make(),
 
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\DeleteAction::make()
+                    ->before( function(Model $record) {
+                        $media = $record->getFirstMedia('file');
+                        if($media){
+                            MediaService::deleteMedia($media);
+                        }
+                    }),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\DeleteBulkAction::make()
+                        ->before(function(array $records){
+                            foreach($records as $record) {
+                                $media = $record->getFirstMedia('file');
+                                if($media){
+                                    MediaService::deleteMedia($media);
+                                }
+                            }
+                        }),
                 ]),
             ]);
     }
@@ -196,6 +206,6 @@ class AttachmentsRelationManager extends RelationManager
             return false;
         }
 
-        return str_contains($file->mime_type, 'image');
+        return MediaService::isImage($file);
     }
 }
