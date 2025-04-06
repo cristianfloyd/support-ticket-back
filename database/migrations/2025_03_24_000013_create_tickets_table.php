@@ -27,6 +27,8 @@ class CreateTicketsTable extends Migration
                 ->constrained('users')
                 ->index()
                 ->name('fk_tickets_user');
+            $table->foreignId('department_id')->nullable()
+                ->constrained('departments')->nullOnDelete();
             $table->foreignId('assigned_to')
                 ->nullable()
                 ->constrained('users')
@@ -49,6 +51,7 @@ class CreateTicketsTable extends Migration
                 ->constrained('equipments')
                 ->index()
                 ->name('fk_tickets_equipment');
+
             $table->boolean('is_resolved')->default(false);
             $table->timestamp('resolved_at')->nullable();
             $table->timestamps();

@@ -15,6 +15,7 @@ use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Tabs\Tab;
 use Filament\Tables\Columns\TextColumn;
+use Illuminate\Database\Eloquent\Model;
 use Filament\Forms\Components\TextInput;
 use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -25,9 +26,12 @@ use App\Filament\Resources\TicketResource\Pages\ViewTicket;
 use App\Filament\Resources\TicketResource\Pages\ListTickets;
 use App\Filament\Resources\TicketResource\Pages\CreateTicket;
 use BezhanSalleh\FilamentShield\Contracts\HasShieldPermissions;
+use App\Filament\Resources\TicketResource\Actions\SelfAssignAction;
 use App\Filament\Resources\TicketResource\Widgets\TicketStatsWidget;
+use App\Filament\Resources\TicketResource\Actions\AssignToUserAction;
 use App\Filament\Resources\TicketResource\Widgets\PendingTicketsWidget;
 use App\Filament\Resources\TicketResource\Widgets\ResolutionTimeWidget;
+use App\Filament\Resources\TicketResource\Actions\AssignToDepartmentAction;
 use App\Filament\Resources\TicketResource\RelationManagers\CommentsRelationManager;
 use App\Filament\Resources\TicketResource\RelationManagers\AttachmentsRelationManager;
 
@@ -120,6 +124,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                                     ->preload()
                                     ->required(),
                                     
+
                                     
                                     Select::make('assigned_to')
                                     ->label('Asignado a')
@@ -224,6 +229,11 @@ class TicketResource extends Resource implements HasShieldPermissions
                 TextColumn::make('category.name')
                     ->label('Categoría')
                     ->badge(),
+
+                TextColumn::make('department.name')
+                    ->label('Departamento')
+                    ->sortable()
+                    ->searchable(),
 
                 TextColumn::make('creator.name')
                     ->label('Creado por')
@@ -350,6 +360,16 @@ class TicketResource extends Resource implements HasShieldPermissions
                         ]);
                     })
                     ->visible(fn ($record) => auth()->guard('web')->user()->can('change_priority_ticket')),
+                AssignToDepartmentAction::make()
+                    ->visible(fn (Model $record) => auth()->guard('web')->user()->hasPermissionTo('assign_tickets')),
+                AssignToUserAction::make()
+                    ->visible(function (Model $record) {
+                        $user = auth()->guard('web')->user();
+                        return $user->hasPermissionTo('assign_tickets') || 
+                               ($record->department_id === $user->department_id && 
+                                $user->hasRole('department_admin'));
+                    }),
+                SelfAssignAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

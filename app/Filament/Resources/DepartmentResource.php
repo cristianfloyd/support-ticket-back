@@ -8,13 +8,13 @@ use Filament\Forms\Form;
 use App\Models\Department;
 use Filament\Tables\Table;
 use Filament\Resources\Resource;
-use Filament\Forms\Components\Card;
+use App\Services\DepartmentService;
 use Filament\Forms\Components\Grid;
-use Filament\Navigation\NavigationItem;
+use Illuminate\Support\Facades\Log;
+use Filament\Forms\Components\Section;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Database\Eloquent\Collection;
 use App\Filament\Resources\DepartmentResource\Pages;
-use App\Filament\Resources\DepartmentResource\RelationManagers;
 use BezhanSalleh\FilamentShield\Contracts\HasShieldPermissions;
 use App\Filament\Resources\DepartmentResource\Widgets\DepartmentTicketsOverview;
 use App\Filament\Resources\DepartmentResource\RelationManagers\UsersRelationManager;
@@ -24,10 +24,9 @@ class DepartmentResource extends Resource implements HasShieldPermissions
     protected static ?string $model = Department::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-building-office-2';
-
     protected static ?string $navigationGroup = 'Administración';
-
     protected static ?int $navigationSort = 2;
+    protected static ?string $recordTitleAttribute = 'name';
 
     public static function getPermissionPrefixes(): array
     {
@@ -47,32 +46,43 @@ class DepartmentResource extends Resource implements HasShieldPermissions
 
     public static function getNavigationBadge(): ?string
     {
-        return static::getModel()::count();
+        try {
+            $departmentService = app(DepartmentService::class);
+            return (string) $departmentService->getAllDepartments()->count();
+        } catch (\Exception $e) {
+            Log::error('Error al obtener el contador de departamentos: ' . $e->getMessage());
+            return null;
+        }
     }
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                Card::make()
+                Section::make('Información del Departamento')
+                    ->description('Datos básicos del departamento')
                     ->schema([
                         Grid::make(2)
                             ->schema([
                                 Forms\Components\TextInput::make('name')
                                     ->label('Nombre')
                                     ->required()
-                                    ->maxLength(255),
+                                    ->maxLength(255)
+                                    ->placeholder('Nombre del departamento'),
 
                                 Forms\Components\Toggle::make('is_active')
                                     ->label('Activo')
                                     ->default(true)
-                                    ->required(),
+                                    ->required()
+                                    ->helperText('Determina si el departamento está activo en el sistema'),
                             ]),
 
                         Forms\Components\Textarea::make('description')
                             ->label('Descripción')
                             ->rows(3)
-                            ->maxLength(500),
+                            ->maxLength(500)
+                            ->placeholder('Descripción breve del departamento y sus funciones')
+                            ->helperText('Máximo 500 caracteres'),
                     ])
             ]);
     }
@@ -89,7 +99,14 @@ class DepartmentResource extends Resource implements HasShieldPermissions
                 Tables\Columns\TextColumn::make('description')
                     ->label('Descripción')
                     ->searchable()
-                    ->limit(50),
+                    ->limit(50)
+                    ->tooltip(function (Tables\Columns\TextColumn $column): ?string {
+                        $state = $column->getState();
+                        if (strlen($state) <= 50) {
+                            return null;
+                        }
+                        return $state;
+                    }),
 
                 Tables\Columns\IconColumn::make('is_active')
                     ->label('Activo')
@@ -121,12 +138,77 @@ class DepartmentResource extends Resource implements HasShieldPermissions
                     ->native(false),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\EditAction::make()
+                    ->successNotificationTitle('Departamento actualizado correctamente'),
+                Tables\Actions\DeleteAction::make()
+                    ->successNotificationTitle('Departamento eliminado correctamente')
+                    ->before(function (Tables\Actions\DeleteAction $action, Department $record) {
+                        $departmentService = app(DepartmentService::class);
+                        
+                        if ($departmentService->hasDepartmentUsers($record->id)) {
+                            $action->cancel();
+                            $action->failureNotificationTitle('No se puede eliminar el departamento');
+                            $action->failureNotification(fn() => 'El departamento tiene usuarios asignados. Reasigne los usuarios antes de eliminar.');
+                        }
+                        
+                        if ($departmentService->hasDepartmentTickets($record->id)) {
+                            $action->cancel();
+                            $action->failureNotificationTitle('No se puede eliminar el departamento');
+                            $action->failureNotification(fn() => 'El departamento tiene tickets asociados. Reasigne los tickets antes de eliminar.');
+                        }
+                    }),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\DeleteBulkAction::make()
+                        ->successNotificationTitle('Departamentos eliminados correctamente')
+                        ->before(function (Tables\Actions\DeleteBulkAction $action, Collection $records) {
+                            $departmentService = app(DepartmentService::class);
+                            $hasRelatedData = false;
+                            
+                            foreach ($records as $record) {
+                                if ($departmentService->hasDepartmentUsers($record->id) || 
+                                    $departmentService->hasDepartmentTickets($record->id)) {
+                                    $hasRelatedData = true;
+                                    break;
+                                }
+                            }
+                            
+                            if ($hasRelatedData) {
+                                $action->cancel();
+                                $action->failureNotificationTitle('No se pueden eliminar algunos departamentos');
+                                $action->failureNotification(fn() => 'Algunos departamentos tienen usuarios o tickets asociados. Reasigne antes de eliminar.');
+                            }
+                        }),
+                    Tables\Actions\BulkAction::make('activar')
+                        ->label('Activar seleccionados')
+                        ->icon('heroicon-o-check-circle')
+                        ->action(function (Collection $records): void {
+                            try {
+                                $departmentService = app(DepartmentService::class);
+                                $ids = $records->pluck('id')->toArray();
+                                $departmentService->bulkToggleDepartmentsActive($ids, true);
+                            } catch (\Exception $e) {
+                                Log::error('Error al activar departamentos: ' . $e->getMessage());
+                                throw $e;
+                            }
+                        })
+                        ->successNotificationTitle('Departamentos activados correctamente'),
+                    Tables\Actions\BulkAction::make('desactivar')
+                        ->label('Desactivar seleccionados')
+                        ->icon('heroicon-o-x-circle')
+                        ->color('danger')
+                        ->action(function (Collection $records): void {
+                            try {
+                                $departmentService = app(DepartmentService::class);
+                                $ids = $records->pluck('id')->toArray();
+                                $departmentService->bulkToggleDepartmentsActive($ids, false);
+                            } catch (\Exception $e) {
+                                Log::error('Error al desactivar departamentos: ' . $e->getMessage());
+                                throw $e;
+                            }
+                        })
+                        ->successNotificationTitle('Departamentos desactivados correctamente'),
                 ]),
             ]);
     }

@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Department;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use App\Models\{Status, Priority, Category, User, UnidadAcademica, Building, Office, Equipment};
 
@@ -10,6 +11,7 @@ class TicketFactory extends Factory
     public function definition(): array
     {
         $building = Building::inRandomOrder()->first();
+
 
         return [
             'title' => $this->faker->sentence,

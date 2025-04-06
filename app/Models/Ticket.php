@@ -25,6 +25,7 @@ class Ticket extends Model
         'category_id',
         'user_id',
         'assigned_to',
+        'department_id',
         'unidad_academica_id',
         'building_id',
         'office_id',
@@ -67,6 +68,11 @@ class Ticket extends Model
 
     // #####################################    RELACIONES   #####################################
 
+    public function departament(): BelongsTo
+    {
+        return $this->belongsTo(Department::class);
+    }
+    
     /**
      * Obtiene el usuario que creó el ticket.
      */

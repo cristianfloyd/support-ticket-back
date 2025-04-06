@@ -163,7 +163,7 @@ php artisan db:seed --class=RolePermissionSeeder
     - Usuario: `create_ticket`, `view_ticket` (solo propios)
   - Restricciones específicas: Filtrado por departamento o creador
 
-## DepartmentResource
+## DepartmentResource  (En revision)
 
 ### Ruta: App\Filament\Resources\DepartmentResource
 
