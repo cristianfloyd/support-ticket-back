@@ -14,7 +14,7 @@ class DepartmentStatsOverview extends BaseWidget
      * 
      * @var DepartmentService
      */
-    protected DepartmentService $departmentService;
+    protected ?DepartmentService $departmentService = null;
 
     /**
      * Inicializa el widget y sus dependencias
@@ -33,21 +33,23 @@ class DepartmentStatsOverview extends BaseWidget
     {
         try {
             // Obtiene las estadísticas desde el servicio
-            $statistics = $this->departmentService->getDepartmentStatistics();
+            $statistics = $this->getDepartmentServiceInstance()->getDepartmentStatistics();
             
+            // $statistics = $this->departmentService->getDepartmentStatistics();
+
             return [
                 // Estadística del total de departamentos
                 Stat::make('Total Departamentos', $statistics['total'])
                     ->description('Número total de departamentos')
                     ->descriptionIcon('heroicon-m-building-office-2')
                     ->color('primary'),
-                
+
                 // Estadística de departamentos activos
                 Stat::make('Departamentos Activos', $statistics['active'])
                     ->description('Departamentos en estado activo')
                     ->descriptionIcon('heroicon-m-check-circle')
                     ->color('success'),
-                
+
                 // Estadística de departamentos inactivos
                 Stat::make('Departamentos Inactivos', $statistics['inactive'])
                     ->description('Departamentos en estado inactivo')
@@ -60,7 +62,7 @@ class DepartmentStatsOverview extends BaseWidget
                 'exception' => $e,
                 'trace' => $e->getTraceAsString()
             ]);
-            
+
             // Devuelve un mensaje de error como estadística
             return [
                 Stat::make('Error', 'No se pudieron cargar las estadísticas')
@@ -69,5 +71,10 @@ class DepartmentStatsOverview extends BaseWidget
                     ->color('danger'),
             ];
         }
+    }
+
+    private function getDepartmentServiceInstance(): DepartmentService
+    {
+        return $this->departmentService ??= app(DepartmentService::class);
     }
 }

@@ -77,4 +77,9 @@ class EditDepartment extends EditRecord
                 }),
         ];
     }
+
+    public function hasCombinedRelationManagerTabsWithContent(): bool
+    {
+        return true;
+    }
 }

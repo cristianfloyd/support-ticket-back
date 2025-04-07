@@ -18,6 +18,7 @@ use App\Filament\Resources\DepartmentResource\Pages;
 use BezhanSalleh\FilamentShield\Contracts\HasShieldPermissions;
 use App\Filament\Resources\DepartmentResource\Widgets\DepartmentTicketsOverview;
 use App\Filament\Resources\DepartmentResource\RelationManagers\UsersRelationManager;
+use App\Filament\Resources\DepartmentResource\RelationManagers\TicketsRelationManager;
 
 class DepartmentResource extends Resource implements HasShieldPermissions
 {
@@ -217,6 +218,7 @@ class DepartmentResource extends Resource implements HasShieldPermissions
     {
         return [
             UsersRelationManager::class,
+            TicketsRelationManager::class,
         ];
     }
 

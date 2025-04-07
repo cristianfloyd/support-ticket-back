@@ -45,4 +45,9 @@ class ListDepartments extends ListRecords
             DepartmentResource\Widgets\DepartmentStatsOverview::class,
         ];
     }
+
+    public function hasCombinedRelationManagerTabsWithContent(): bool
+    {
+        return true;
+    }
 }
