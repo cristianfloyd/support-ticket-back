@@ -40,11 +40,22 @@ class SelfAssignAction extends Action
             })
             ->visible(function (Model $record): bool {
                 $user = auth()->guard('web')->user();
-                
+
                 // Solo visible si el ticket no está asignado a un usuario
                 // o si pertenece al departamento del usuario actual
-                return !$record->assigned_to && 
+                return !$record->assigned_to &&
                        (!$record->department_id || $record->department_id === $user->department_id);
             });
+    }
+
+    /**
+     * Crea una nueva instancia de la acción de auto-asignación.
+     *
+     * @param  string|null  $name
+     * @return static
+     */
+    public static function make(string|null $name = null): static
+    {
+        return parent::make($name ?? 'Asignar_a_Mí');
     }
 }

@@ -21,11 +21,11 @@ class AssignToUserAction extends Action
             ->form(function (Model $record) {
                 $departmentId = $record->department_id;
                 $userQuery = User::query();
-                
+
                 if ($departmentId) {
                     $userQuery->where('department_id', $departmentId);
                 }
-                
+
                 return [
                     Select::make('user_id')
                         ->label('Usuario')
@@ -51,6 +51,23 @@ class AssignToUserAction extends Action
                         ->danger()
                         ->send();
                 }
+            })
+            ->visible(function (Model $record) {
+                $user = auth()->guard('web')->user();
+                return $user->hasPermissionTo('assign_ticket') ||
+                    ($record->department_id === $user->department_id &&
+                        $user->hasRole('department_admin'));
             });
+    }
+
+    /**
+     * Crea una nueva instancia de la acción.
+     *
+     * @param  string|null  $name
+     * @return static
+     */
+    public static function make(string|null $name = null): static
+    {
+        return parent::make($name ?? 'Asignar_a_Usuario');
     }
 }

@@ -42,6 +42,18 @@ class AssignToDepartmentAction extends Action
                         ->danger()
                         ->send();
                 }
-            });
+            })
+            ->visible(fn (Model $record) => auth()->guard('web')->user()->hasPermissionTo('assign_ticket'));
+    }
+
+    /**
+     * Crea una nueva instancia de la acción.
+     *
+     * @param  string|null  $name
+     * @return static
+     */
+    public static function make(string|null $name = null): static
+    {
+        return parent::make($name ?? 'Asignar_a_Departamento');
     }
 }

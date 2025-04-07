@@ -95,7 +95,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                                     ->required()
                                     ->maxLength(255)
                                     ->columnSpan(7),
-                                    
+
                                     MarkdownEditor::make('description')
                                     ->label('Descripción')
                                     ->required()
@@ -110,28 +110,28 @@ class TicketResource extends Resource implements HasShieldPermissions
                                     ->relationship('status', 'name')
                                     ->preload()
                                     ->required(),
-                                    
+
                                     Select::make('priority_id')
                                     ->label('Prioridad')
                                     ->relationship('priority', 'name')
                                     ->preload()
                                     ->required(),
                                 ])->columnSpan(2),
-                                    
+
                                     Select::make('category_id')
                                     ->label('Categoría')
                                     ->relationship('category', 'name')
                                     ->preload()
                                     ->required(),
-                                    
 
-                                    
+
+
                                     Select::make('assigned_to')
                                     ->label('Asignado a')
                                     ->relationship('assignedTo', 'name')
                                     ->preload()
                                     ->searchable(),
-                                    
+
                                     Select::make('unidad_academica_id')
                                     ->label('Unidad Académica')
                                     ->relationship('unidadAcademica', 'name')
@@ -139,7 +139,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                                     ->required()
                                     ->reactive()
                                     ->afterStateUpdated(fn (callable $set) => $set('building_id', null)),
-                                    
+
                                     Select::make('building_id')
                                     ->label('Edificio')
                                     ->relationship('building', 'name', function ($query, $get) {
@@ -153,7 +153,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                                     ->searchable()
                                     ->reactive()
                                     ->afterStateUpdated(fn (callable $set) => $set('office_id', null)),
-                                    
+
                                     Select::make('office_id')
                                     ->label('Oficina')
                                     ->relationship('office', 'name', function ($query, $get) {
@@ -165,13 +165,13 @@ class TicketResource extends Resource implements HasShieldPermissions
                                     })
                                     ->preload()
                                     ->searchable(),
-                                    
+
                                     Select::make('equipment_id')
                                     ->label('Equipo')
                                     ->relationship('equipment', 'name')
                                     ->preload()
                                     ->searchable(),
-                                    
+
                                 Toggle::make('is_resolved')
                                     ->label('Resuelto')
                                     ->reactive()
@@ -361,12 +361,12 @@ class TicketResource extends Resource implements HasShieldPermissions
                     })
                     ->visible(fn ($record) => auth()->guard('web')->user()->can('change_priority_ticket')),
                 AssignToDepartmentAction::make()
-                    ->visible(fn (Model $record) => auth()->guard('web')->user()->hasPermissionTo('assign_tickets')),
+                    ->visible(fn (Model $record) => auth()->guard('web')->user()->hasPermissionTo('assign_ticket')),
                 AssignToUserAction::make()
                     ->visible(function (Model $record) {
                         $user = auth()->guard('web')->user();
-                        return $user->hasPermissionTo('assign_tickets') || 
-                               ($record->department_id === $user->department_id && 
+                        return $user->hasPermissionTo('assign_ticket') ||
+                               ($record->department_id === $user->department_id &&
                                 $user->hasRole('department_admin'));
                     }),
                 SelfAssignAction::make(),
