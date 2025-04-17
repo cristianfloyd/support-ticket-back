@@ -203,6 +203,7 @@ class ProviderResource extends Resource implements HasShieldPermissions
         ];
     }
 
+
     public static function getPages(): array
     {
         return [
