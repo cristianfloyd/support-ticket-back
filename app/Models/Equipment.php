@@ -21,7 +21,8 @@ class Equipment extends Model
         'office_id',
         'specifications',
         'purchase_date',
-        'warranty_expiration'
+        'warranty_expiration',
+        'is_active',
     ];
 
     protected $casts = [

@@ -17,6 +17,7 @@ class CreateEquipmentsTable extends Migration
             $table->date('purchase_date')->nullable();
             $table->date('warranty_expiration')->nullable();
             $table->timestamp('next_maintenance')->nullable();
+            $table->boolean('is_active')->default(true);
             $table->timestamps();
             $table->softDeletes();
         });
